@@ -45,7 +45,7 @@ Check then both to add both options in context menu.
 # Tests:
 
 - Execute ```pytest ./tests -v --html=./reports/report.html``` to run tests in verbose mode and generate a report inside reports folder.
-- Execute ```pytest .\tests\api\users_api_test.py -k create_user_api -v --html=./reports/report.html``` to run tests that contains "create_user_api" in its structure inside users_api_test.py file in verbose mode and generate a report inside reports folder.
+- Execute ```pytest ./tests/api/users_api_test.py -k create_user_api -v --html=./reports/report.html``` to run tests that contains "create_user_api" in its structure inside users_api_test.py file in verbose mode and generate a report inside reports folder.
 
 # Support:
 
@@ -76,7 +76,7 @@ Check then both to add both options in context menu.
 
 # Tips:
 
-- WEB and API tests to send password reset link to user's email and API tests to verify a password reset token and reset a user's password must be tested manually as they rely on e-mail verification. 
+- API tests to verify a password reset token and reset a user's password must be tested manually as they rely on e-mail verification. 
 - delete_note_api was created only with the practice purpose since there is the possibility to delete the user right away. 
 - Trust ChatGPT.
 - Database assertions are done in api tests. A individual database suite can be created.
