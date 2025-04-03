@@ -1,0 +1,6 @@
+pytest
+mysql-connector-python
+Faker
+requests
+pytest-html
+python-dotenv

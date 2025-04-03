@@ -1,0 +1,5 @@
+.pytest_cache/
+reports/
+tests/api/__pycache__/
+commiting.txt
+tests/api/.env
