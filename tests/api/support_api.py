@@ -3,6 +3,8 @@ import os
 import requests
 from faker import Faker
 
+from tests.api.users_api_test import setup_database
+
 # from tests.api.users_api_test import setup_database
 
 
