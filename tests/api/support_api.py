@@ -3,13 +3,11 @@ import os
 import requests
 from faker import Faker
 
-from tests.api.users_api_test import setup_database
-
-# from tests.api.users_api_test import setup_database
 
 
 
-def create_user_api(randomData):
+
+def create_user_api(randomData, setup_database):
     cursor = setup_database.cursor(dictionary=True)
     
     # Seleciona um usuário aleatório do banco de dados
@@ -47,7 +45,7 @@ def create_user_api(randomData):
     with open(f"./tests/fixtures/file-{randomData}.json", 'w') as json_file:
         json.dump(user_index_data, json_file, indent=4)
 
-def login_user_api(randomData):
+def login_user_api(randomData, setup_database):
    # Abre o arquivo para obter o index do usuário escolhido aleatoriamente
     with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
         data = json.load(json_file)
@@ -94,7 +92,7 @@ def login_user_api(randomData):
     with open(f"./tests/fixtures/file-{randomData}.json", 'w') as json_file:
         json.dump(user_index_data, json_file, indent=4)
     
-def delete_user_api(randomData):
+def delete_user_api(randomData, setup_database):
     # Abre o arquivo para obter o index do usuário escolhido aleatoriamente
     with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
         data = json.load(json_file)
