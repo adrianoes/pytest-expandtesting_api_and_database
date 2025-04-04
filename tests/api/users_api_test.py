@@ -97,7 +97,6 @@ def insert_users(setup_database, create_table):
     cursor.close()
 
 @pytest.fixture(scope="session", autouse=True)
-
 def teardown_database(setup_database):
     """Exclui o banco de dados após todos os testes serem executados"""
     yield  # Executa os testes antes de remover o banco

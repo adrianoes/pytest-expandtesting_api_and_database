@@ -6,29 +6,29 @@ from dotenv import load_dotenv
 import time
 import json
 import requests
-from .support_api import create_user_api, delete_json_file, delete_note_api, delete_user_api, login_user_api
+from .support_api import create_user4Notes_api, delete_json_file, delete_note_api, delete_user4Notes_api, login_user4Notes_api
 
 # Carregar variáveis de ambiente do arquivo .env
 load_dotenv()
 
-db_config = {
+db_config4Notes = {
     'host': os.getenv('DB_HOST', 'localhost'),
     'user': os.getenv('DB_USER', 'root'),
     'password': os.getenv('DB_PASSWORD', ''),
-    'database': os.getenv('DB_NAME', 'users'),
+    'database': os.getenv('DB_NAME_N', 'notes'),
 }
 
 # Inicializa o Faker
 fake = Faker()
 
 @pytest.fixture(scope="session")
-def connection():
+def connection4Notes():
     """Cria uma conexão com o MySQL"""
     try:
         conn = mysql.connector.connect(
-            host=db_config['host'],
-            user=db_config['user'],
-            password=db_config['password']
+            host=db_config4Notes['host'],
+            user=db_config4Notes['user'],
+            password=db_config4Notes['password']
         )
         yield conn
     finally:
@@ -36,32 +36,32 @@ def connection():
             conn.close()
 
 @pytest.fixture(scope="session")
-def create_database(connection):
+def create_database4Notes(connection4Notes):
     """Cria o banco de dados se ele não existir"""
-    cursor = connection.cursor()
-    cursor.execute(f"CREATE DATABASE IF NOT EXISTS {db_config['database']}")
+    cursor = connection4Notes.cursor()
+    cursor.execute(f"CREATE DATABASE IF NOT EXISTS {db_config4Notes['database']}")
     cursor.close()
 
 @pytest.fixture(scope="session")
-def setup_database(connection, create_database):
+def setup_database4Notes(connection4Notes, create_database4Notes):
     """Conecta no banco de dados criado"""
     conn = mysql.connector.connect(
-        host=db_config['host'],
-        user=db_config['user'],
-        password=db_config['password'],
-        database=db_config['database']
+        host=db_config4Notes['host'],
+        user=db_config4Notes['user'],
+        password=db_config4Notes['password'],
+        database=db_config4Notes['database']
     )
     yield conn
     if conn.is_connected():
         conn.close()
 
 @pytest.fixture(scope="session")
-def create_table(setup_database):
+def create_table4Notes(setup_database4Notes):
     """Cria a tabela de notas e usuários"""
-    cursor = setup_database.cursor()
+    cursor = setup_database4Notes.cursor()
     
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS users (
+        CREATE TABLE IF NOT EXISTS notes (
             `index` INT AUTO_INCREMENT PRIMARY KEY,
             id VARCHAR(255) NULL,
             name VARCHAR(255) NOT NULL,
@@ -82,9 +82,9 @@ def create_table(setup_database):
     cursor.close()
 
 @pytest.fixture(scope="session")
-def insert_users(setup_database, create_table):
+def insert_users4Notes(setup_database4Notes, create_table4Notes):
     """Insere 250 notas na tabela"""
-    cursor = setup_database.cursor()
+    cursor = setup_database4Notes.cursor()
     
     for _ in range(250):
         name = fake.name()
@@ -98,38 +98,37 @@ def insert_users(setup_database, create_table):
         noteCategory = fake.random_element(elements=('Home', 'Personal', 'Work'))
 
         cursor.execute("""
-            INSERT INTO users (name, email, password, company, phone, noteTitle, noteDescription, noteCategory)
+            INSERT INTO notes (name, email, password, company, phone, noteTitle, noteDescription, noteCategory)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """, (name, email, password, company, phone, noteTitle, noteDescription, noteCategory))
     
-    setup_database.commit()
+    setup_database4Notes.commit()
     cursor.close()
 
 @pytest.fixture(scope="session", autouse=True)
-
-def teardown_database(setup_database):
+def teardown_database4Notes(setup_database4Notes):
     """Exclui o banco de dados após todos os testes serem executados"""
     yield  # Executa os testes antes de remover o banco
     
-    cursor = setup_database.cursor()
-    cursor.execute(f"DROP DATABASE IF EXISTS {db_config['database']}")
-    setup_database.commit()
+    cursor = setup_database4Notes.cursor()
+    cursor.execute(f"DROP DATABASE IF EXISTS {db_config4Notes['database']}")
+    setup_database4Notes.commit()
     cursor.close()
-    setup_database.close()
+    setup_database4Notes.close()
     print("\n🔥 Banco de dados excluído após os testes!")
 
-def test_create_note_api(setup_database, create_table, insert_users):
+def test_create_note_api(setup_database4Notes, create_table4Notes, insert_users4Notes):
     randomData = Faker().hexify(text='^^^^^^^^^^^^')
-    create_user_api(randomData, setup_database)
-    login_user_api(randomData, setup_database)
+    create_user4Notes_api(randomData, setup_database4Notes)
+    login_user4Notes_api(randomData, setup_database4Notes)
     # Abre o arquivo para obter o index do usuário escolhido aleatoriamente
     with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
         data = json.load(json_file)
     user_index = data['user_index']
 
     # Conecta ao banco de dados para buscar os dados do usuário e da nota pelo index
-    cursor = setup_database.cursor(dictionary=True)
-    cursor.execute("SELECT id, token, noteTitle, noteDescription, noteCategory FROM users WHERE `index` = %s", (user_index,))
+    cursor = setup_database4Notes.cursor(dictionary=True)
+    cursor.execute("SELECT id, token, noteTitle, noteDescription, noteCategory FROM notes WHERE `index` = %s", (user_index,))
     user_note = cursor.fetchone()
 
     # Atribui os valores do banco de dados às variáveis
@@ -158,16 +157,16 @@ def test_create_note_api(setup_database, create_table, insert_users):
     note_updated_at = respJS['data']['updated_at']
 
     # Atualiza os dados da nota na linha do usuário correspondente ao user_index
-    cursor = setup_database.cursor()
+    cursor = setup_database4Notes.cursor()
     cursor.execute("""
-        UPDATE users 
+        UPDATE notes 
         SET noteId = %s, noteTitle = %s, noteDescription = %s, 
             noteCategory = %s, noteCompleted = %s, 
             noteCreatedAt = %s, noteUpdatedAt = %s
         WHERE `index` = %s
     """, (note_id, note_title, note_description, note_category, note_completed, note_created_at, note_updated_at, user_index))
     
-    setup_database.commit()
+    setup_database4Notes.commit()
     cursor.close()
 
     # Armazena apenas o índice do usuário escolhido no arquivo JSON
@@ -177,8 +176,8 @@ def test_create_note_api(setup_database, create_table, insert_users):
         json.dump(user_index_data, json_file, indent=4)
 
     # This functions is here only for practice purpose since we already have delete_user_api to delete the user right away.
-    delete_note_api(randomData, setup_database)
-    delete_user_api(randomData, setup_database)
+    delete_note_api(randomData, setup_database4Notes)
+    delete_user4Notes_api(randomData, setup_database4Notes)
     delete_json_file(randomData)
     time.sleep(5)
 
