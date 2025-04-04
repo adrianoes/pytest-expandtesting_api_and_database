@@ -17,10 +17,9 @@ jobs:
       mysql:
         image: mysql:8.0  # Versão do MySQL
         env:
-          MYSQL_ROOT_PASSWORD: root  # Senha do usuário root
-          MYSQL_DATABASE: users  # Nome do banco de dados
-          MYSQL_USER: test_user  # Usuário do banco de dados
-          MYSQL_PASSWORD: test_password  # Senha do usuário
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_USER: test_user
+          MYSQL_PASSWORD: test_password
         ports:
           - 3306:3306
         options: >-
@@ -28,6 +27,8 @@ jobs:
           --health-interval=10s
           --health-timeout=5s
           --health-retries=3
+        volumes:
+          - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
 
     steps:
       - uses: actions/checkout@v4
@@ -51,7 +52,8 @@ jobs:
           DB_HOST: 127.0.0.1
           DB_USER: test_user
           DB_PASSWORD: test_password
-          DB_NAME: users
+          DB_USERS_NAME: users
+          DB_NOTES_NAME: notes
         run: pytest ./tests -v --html=./reports/report.html
 
       - name: Test Report Generation
