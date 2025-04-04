@@ -3,15 +3,14 @@ import mysql.connector
 import pytest
 from faker import Faker
 from dotenv import load_dotenv
-import os
 import time
 import json
 import requests
 from .support_api import create_user_api, delete_json_file, delete_user_api, login_user_api
+
 # Carregar variáveis de ambiente do arquivo .env
 load_dotenv()
 
-# Agora, as variáveis de ambiente serão carregadas automaticamente
 db_config = {
     'host': os.getenv('DB_HOST', 'localhost'),
     'user': os.getenv('DB_USER', 'root'),
@@ -61,7 +60,6 @@ def create_table(setup_database):
     """Cria a tabela de usuários"""
     cursor = setup_database.cursor()
     
-    # Corrigido para remover o comentário que causava erro de sintaxe
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             `index` INT AUTO_INCREMENT PRIMARY KEY,
@@ -729,177 +727,3 @@ def test_delete_user_api_unauthorized(setup_database):
     time.sleep(5)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# def test_create_user_api(setup_database):
-#     randomData = Faker().hexify(text='^^^^^^^^^^^^')
-#     cursor = setup_database.cursor(dictionary=True)
-    
-#     # Seleciona um usuário aleatório do banco de dados
-#     cursor.execute("SELECT `index`, name, email, password FROM users ORDER BY RAND() LIMIT 1")
-#     user = cursor.fetchone()
-
-#     user_index = user["index"]
-#     user_name = user["name"]
-#     user_email = user["email"]
-#     user_password = user["password"]
-
-#     body = {'confirmPassword': user_password, 'email': user_email, 'name': user_name, 'password': user_password}
-#     print(body)
-#     headers = {'accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded'}
-#     resp = requests.post("https://practice.expandtesting.com/notes/api/users/register", headers=headers, data=body)
-#     respJS = resp.json()
-#     print(respJS)
-
-#     assert True == respJS['success']
-#     assert 201 == respJS['status']
-#     assert "User account created successfully" == respJS['message']
-#     assert user_email == respJS['data']['email']
-#     assert user_name == respJS['data']['name']
-
-#     user_id = respJS['data']['id']
-
-#     # Atualiza o ID do usuário na mesma linha no banco de dados
-#     cursor.execute("UPDATE users SET id = %s WHERE `index` = %s", (user_id, user_index))
-#     setup_database.commit()
-#     cursor.close()
-
-#     # Armazena apenas o índice do usuário escolhido
-#     user_index_data = {"user_index": user_index}
-
-#     with open(f"./tests/fixtures/file-{randomData}.json", 'w') as json_file:
-#         json.dump(user_index_data, json_file, indent=4)
-
-
-
-
-
-
-#     # Abre o arquivo para obter o index do usuário escolhido aleatoriamente
-#     with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
-#         data = json.load(json_file)
-#     user_index = data['user_index']
-
-#     # Conecta ao banco de dados para buscar os dados do usuário pelo index
-#     cursor = setup_database.cursor(dictionary=True)
-#     cursor.execute("SELECT id, name, email, password FROM users WHERE `index` = %s", (user_index,))
-#     user = cursor.fetchone()
-
-#     # Atribui os valores do banco de dados às variáveis
-#     user_id = user["id"]
-#     user_name = user["name"]
-#     user_email = user["email"]
-#     user_password = user["password"]
-
-#     body = {'email': user_email, 'password': user_password}
-#     print(body)
-#     headers = {'accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded'}
-#     resp = requests.post("https://practice.expandtesting.com/notes/api/users/login", headers=headers, data=body)
-#     respJS = resp.json()
-#     print(respJS)
-
-#     assert True == respJS['success']
-#     assert 200 == respJS['status']
-#     assert "Login successful" == respJS['message']
-#     assert user_email == respJS['data']['email']
-#     assert user_id == respJS['data']['id']
-#     assert user_name == respJS['data']['name']
-    
-#     # Obtém o token de usuário
-#     user_token = respJS['data']['token']
-
-#     # Atualiza o banco de dados com o token obtido
-#     cursor.execute("UPDATE users SET token = %s WHERE `index` = %s", (user_token, user_index))
-#     setup_database.commit()
-#     cursor.close()
-
-#     # Atualiza o objeto com o índice do usuário escolhido
-#     user_index_data = {"user_index": user_index}
-
-#     # Não precisa mais salvar no arquivo JSON, a informação foi atualizada no banco de dados
-#     # Escreve o índice do usuário no arquivo JSON (se necessário)
-#     with open(f"./tests/fixtures/file-{randomData}.json", 'w') as json_file:
-#         json.dump(user_index_data, json_file, indent=4)
-
-
-
-
-
-
-
-
-#     # Abre o arquivo para obter o index do usuário escolhido aleatoriamente
-#     with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
-#         data = json.load(json_file)
-#     user_index = data['user_index']
-
-#     # Conecta ao banco de dados para buscar o token do usuário pelo index
-#     cursor = setup_database.cursor(dictionary=True)
-#     cursor.execute("SELECT token FROM users WHERE `index` = %s", (user_index,))
-#     user = cursor.fetchone()
-
-#     # Atribui o valor do token à variável user_token
-#     user_token = user["token"]
-
-#     headers = {'accept': 'application/json', 'x-auth-token': user_token}
-#     resp = requests.delete("https://practice.expandtesting.com/notes/api/users/delete-account", headers=headers)
-#     respJS = resp.json()
-#     print(respJS)
-
-#     assert True == respJS['success']
-#     assert 200 == respJS['status']
-#     assert "Account successfully deleted" == respJS['message']
-
-#     # Exclui o banco de dados criado
-#     cursor.execute(f"DROP DATABASE IF EXISTS {db_config['database']}")
-#     setup_database.commit()
-#     cursor.close()
-#     delete_json_file(randomData)
-#     time.sleep(5)

@@ -4,9 +4,6 @@ import requests
 from faker import Faker
 
 
-
-
-
 def create_user_api(randomData, setup_database):
     cursor = setup_database.cursor(dictionary=True)
     
@@ -115,14 +112,29 @@ def delete_user_api(randomData, setup_database):
     assert 200 == respJS['status']
     assert "Account successfully deleted" == respJS['message']
 
-def delete_note_api(randomData):    
+def delete_note_api(randomData, setup_database):    
+    # Abre o arquivo para obter o index do usuário escolhido aleatoriamente
     with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
         data = json.load(json_file)
-    note_id = data['note_id']
-    user_token = data['user_token']
+    user_index = data['user_index']
+
+    # Conecta ao banco de dados para buscar o note_id e o token do usuário pelo index
+    cursor = setup_database.cursor(dictionary=True)
+    cursor.execute("SELECT noteId, token FROM users WHERE `index` = %s", (user_index,))
+    user = cursor.fetchone()
+
+    # Atribui os valores do banco de dados às variáveis
+    note_id = user["noteId"]
+    user_token = user["token"]
+
+    # Cabeçalhos da requisição
     headers = {'accept': 'application/json', 'x-auth-token': user_token}
+    
+    # Envia a requisição para deletar a nota
     resp = requests.delete(f"https://practice.expandtesting.com/notes/api/notes/{note_id}", headers=headers)
     respJS = resp.json()
+    
+    # Imprime a resposta e verifica se a operação foi bem-sucedida
     print(respJS)
     assert True == respJS['success']
     assert 200 == respJS['status']

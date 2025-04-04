@@ -79,4 +79,4 @@ Check then both to add both options in context menu.
 - API tests to verify a password reset token and reset a user's password must be tested manually as they rely on e-mail verification. 
 - delete_note_api was created only with the practice purpose since there is the possibility to delete the user right away. 
 - Trust ChatGPT.
-- Database assertions are done in api tests. A individual database suite can be created.
+- This project was developed in VSC. Problems regarding non accessed arguments were faced. Argumetns were presented in translucid form (not accessed) but were required for the correct execution of the test. Attempt to use Pycharm Is recommended. 
