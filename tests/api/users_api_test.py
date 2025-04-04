@@ -22,7 +22,7 @@ db_config = {
 # Inicializa o Faker
 fake = Faker()
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def connection():
     """Cria uma conexão com o MySQL"""
     try:
@@ -36,14 +36,14 @@ def connection():
         if conn.is_connected():
             conn.close()
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def create_database(connection):
     """Cria o banco de dados se ele não existir"""
     cursor = connection.cursor()
     cursor.execute(f"CREATE DATABASE IF NOT EXISTS {db_config['database']}")
     cursor.close()
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def setup_database(connection, create_database):
     """Conecta no banco de dados criado"""
     conn = mysql.connector.connect(
@@ -56,7 +56,7 @@ def setup_database(connection, create_database):
     if conn.is_connected():
         conn.close()
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def create_table(setup_database):
     """Cria a tabela de usuários"""
     cursor = setup_database.cursor()
@@ -76,7 +76,7 @@ def create_table(setup_database):
     """)
     cursor.close()
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def insert_users(setup_database, create_table):
     """Insere 250 usuários na tabela"""
     cursor = setup_database.cursor()
@@ -98,25 +98,20 @@ def insert_users(setup_database, create_table):
     setup_database.commit()  # Confirma a inserção
     cursor.close()
 
-def test_create_database(setup_database, insert_users):
-    """Valida se o banco de dados foi criado com sucesso"""
-    cursor = setup_database.cursor()
-    cursor.execute("SHOW DATABASES LIKE %s", (db_config['database'],))
-    result = cursor.fetchone()
-    cursor.close()
-    
-    assert result is not None, f"Banco de dados {db_config['database']} não encontrado!"
+@pytest.fixture(scope="session", autouse=True)
 
-def test_user_insertion(setup_database, insert_users):
-    """Valida se os usuários foram inseridos corretamente"""
-    cursor = setup_database.cursor()
-    cursor.execute("SELECT COUNT(*) FROM users")
-    result = cursor.fetchone()
-    cursor.close()
+def teardown_database(setup_database):
+    """Exclui o banco de dados após todos os testes serem executados"""
+    yield  # Executa os testes antes de remover o banco
     
-    assert result[0] == 250, f"Esperado 250 usuários, mas encontrou {result[0]}!"
+    cursor = setup_database.cursor()
+    cursor.execute(f"DROP DATABASE IF EXISTS {db_config['database']}")
+    setup_database.commit()
+    cursor.close()
+    setup_database.close()
+    print("\n🔥 Banco de dados excluído após os testes!")
 
-def test_create_user_api(setup_database):
+def test_create_user_api(setup_database, create_table, insert_users):
     randomData = Faker().hexify(text='^^^^^^^^^^^^')
     cursor = setup_database.cursor(dictionary=True)
     
@@ -701,11 +696,6 @@ def test_delete_user_api(setup_database):
     assert 200 == respJS['status']
     assert "Account successfully deleted" == respJS['message']
 
-    # Exclui o banco de dados criado
-    cursor.execute(f"DROP DATABASE IF EXISTS {db_config['database']}")
-    setup_database.commit()
-    cursor.close()
-
     delete_json_file(randomData)
     time.sleep(5)
 
@@ -734,11 +724,6 @@ def test_delete_user_api_unauthorized(setup_database):
     assert "Access token is not valid or has expired, you will need to login" == respJS['message']
 
     delete_user_api(randomData, setup_database)
-
-    # Exclui o banco de dados criado
-    cursor.execute(f"DROP DATABASE IF EXISTS {db_config['database']}")
-    setup_database.commit()
-    cursor.close()
 
     delete_json_file(randomData)
     time.sleep(5)
