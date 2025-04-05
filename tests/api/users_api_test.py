@@ -128,18 +128,22 @@ def test_create_user_api(setup_database, create_table, insert_users):
     respJS = resp.json()
     print(respJS)
 
-    assert True == respJS['success']
-    assert 201 == respJS['status']
-    assert "User account created successfully" == respJS['message']
-    assert user_email == respJS['data']['email']
-    assert user_name == respJS['data']['name']
-
     user_id = respJS['data']['id']
 
     # Atualiza o ID do usuário na mesma linha no banco de dados
     cursor.execute("UPDATE users SET id = %s WHERE `index` = %s", (user_id, user_index))
     setup_database.commit()
+
+    cursor.execute("SELECT id FROM users WHERE `index` = %s", (user_index,))
+    db_user = cursor.fetchone()
     cursor.close()
+
+    assert True == respJS['success']
+    assert 201 == respJS['status']
+    assert "User account created successfully" == respJS['message']
+    assert user_email == respJS['data']['email']
+    assert user_name == respJS['data']['name']
+    assert db_user['id'] == user_id #database validation
 
     # Armazena apenas o índice do usuário escolhido
     user_index_data = {"user_index": user_index}
@@ -198,20 +202,25 @@ def test_login_user_api(setup_database):
     respJS = resp.json()
     print(respJS)
 
-    assert True == respJS['success']
-    assert 200 == respJS['status']
-    assert "Login successful" == respJS['message']
-    assert user_email == respJS['data']['email']
-    assert user_id == respJS['data']['id']
-    assert user_name == respJS['data']['name']
-    
     # Obtém o token de usuário
     user_token = respJS['data']['token']
 
     # Atualiza o banco de dados com o token obtido
     cursor.execute("UPDATE users SET token = %s WHERE `index` = %s", (user_token, user_index))
     setup_database.commit()
+
+    # Consulta o token no banco para validação
+    cursor.execute("SELECT token FROM users WHERE `index` = %s", (user_index,))
+    db_user = cursor.fetchone()
     cursor.close()
+
+    assert True == respJS['success']
+    assert 200 == respJS['status']
+    assert "Login successful" == respJS['message']
+    assert user_email == respJS['data']['email']
+    assert user_id == respJS['data']['id']
+    assert user_name == respJS['data']['name']
+    assert db_user['token'] == user_token  # database validation
 
     # Atualiza o objeto com o índice do usuário escolhido
     user_index_data = {"user_index": user_index}
@@ -387,6 +396,20 @@ def test_update_user_api(setup_database):
     respJS = resp.json()
     print(respJS)
 
+    # Grava os dados atualizados no banco
+    cursor = setup_database.cursor(dictionary=True)
+    cursor.execute("""
+        UPDATE users
+        SET name = %s, phone = %s, company = %s
+        WHERE `index` = %s
+    """, (new_user_name, new_user_phone, new_user_company, user_index))
+    setup_database.commit()
+
+    # Consulta os dados para validação
+    cursor.execute("SELECT name, phone, company FROM users WHERE `index` = %s", (user_index,))
+    db_user = cursor.fetchone()
+    cursor.close()
+
     # Validações das respostas da API
     assert True == respJS['success']
     assert 200 == respJS['status']
@@ -396,6 +419,11 @@ def test_update_user_api(setup_database):
     assert user_id == respJS['data']['id']
     assert new_user_name == respJS['data']['name']
     assert new_user_phone == respJS['data']['phone']
+
+    # Validações com os dados do banco
+    assert db_user['name'] == new_user_name  # database validation
+    assert db_user['phone'] == new_user_phone  # database validation
+    assert db_user['company'] == new_user_company  # database validation
 
     # Deleta o usuário e o arquivo JSON após o teste
     delete_user_api(randomData, setup_database)
@@ -521,10 +549,21 @@ def test_update_user_password_api(setup_database):
     respJS = resp.json()
     print(respJS)
 
+    # Atualiza a nova senha no banco
+    cursor = setup_database.cursor(dictionary=True)
+    cursor.execute("UPDATE users SET password = %s WHERE `index` = %s", (user_new_password, user_index))
+    setup_database.commit()
+
+    # Consulta a senha atualizada para validar
+    cursor.execute("SELECT password FROM users WHERE `index` = %s", (user_index,))
+    db_user = cursor.fetchone()
+    cursor.close()
+
     # Validações para a resposta da API de sucesso
     assert True == respJS['success']
     assert 200 == respJS['status']
     assert "The password was successfully updated" == respJS['message']
+    assert db_user['password'] == user_new_password  # database validation
 
     # Deleta o usuário e o arquivo JSON após o teste
     delete_user_api(randomData, setup_database)

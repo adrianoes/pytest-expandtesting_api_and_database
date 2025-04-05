@@ -23,18 +23,22 @@ def create_user_api(randomData, setup_database):
     respJS = resp.json()
     print(respJS)
 
-    assert True == respJS['success']
-    assert 201 == respJS['status']
-    assert "User account created successfully" == respJS['message']
-    assert user_email == respJS['data']['email']
-    assert user_name == respJS['data']['name']
-
     user_id = respJS['data']['id']
 
     # Atualiza o ID do usuário na mesma linha no banco de dados
     cursor.execute("UPDATE users SET id = %s WHERE `index` = %s", (user_id, user_index))
     setup_database.commit()
+
+    cursor.execute("SELECT id FROM users WHERE `index` = %s", (user_index,))
+    db_user = cursor.fetchone()
     cursor.close()
+
+    assert True == respJS['success']
+    assert 201 == respJS['status']
+    assert "User account created successfully" == respJS['message']
+    assert user_email == respJS['data']['email']
+    assert user_name == respJS['data']['name']
+    assert db_user['id'] == user_id #database validation
 
     # Armazena apenas o índice do usuário escolhido
     user_index_data = {"user_index": user_index}
@@ -66,20 +70,25 @@ def login_user_api(randomData, setup_database):
     respJS = resp.json()
     print(respJS)
 
-    assert True == respJS['success']
-    assert 200 == respJS['status']
-    assert "Login successful" == respJS['message']
-    assert user_email == respJS['data']['email']
-    assert user_id == respJS['data']['id']
-    assert user_name == respJS['data']['name']
-    
     # Obtém o token de usuário
     user_token = respJS['data']['token']
 
     # Atualiza o banco de dados com o token obtido
     cursor.execute("UPDATE users SET token = %s WHERE `index` = %s", (user_token, user_index))
     setup_database.commit()
+
+    # Consulta o token no banco para validação
+    cursor.execute("SELECT token FROM users WHERE `index` = %s", (user_index,))
+    db_user = cursor.fetchone()
     cursor.close()
+
+    assert True == respJS['success']
+    assert 200 == respJS['status']
+    assert "Login successful" == respJS['message']
+    assert user_email == respJS['data']['email']
+    assert user_id == respJS['data']['id']
+    assert user_name == respJS['data']['name']
+    assert db_user['token'] == user_token  # database validation
 
     # Atualiza o objeto com o índice do usuário escolhido
     user_index_data = {"user_index": user_index}
