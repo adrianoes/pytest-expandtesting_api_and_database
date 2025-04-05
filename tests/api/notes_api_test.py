@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 import time
 import json
 import requests
-from .support_api import create_user4Notes_api, delete_json_file, delete_note_api, delete_user4Notes_api, login_user4Notes_api
+from .support_api import create_note_api, create_user4Notes_api, delete_json_file, delete_note_api, delete_user4Notes_api, login_user4Notes_api
 
 # Carregar variáveis de ambiente do arquivo .env
 load_dotenv()
@@ -181,455 +181,720 @@ def test_create_note_api(setup_database4Notes, create_table4Notes, insert_users4
     delete_json_file(randomData)
     time.sleep(5)
 
-# def test_create_note_api_bad_request():
-#     randomData = Faker().hexify(text='^^^^^^^^^^^^')
-#     create_user_api(randomData)
-#     login_user_api(randomData)
-#     with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
-#         data = json.load(json_file)
-#     user_id = data['user_id']
-#     user_token = data['user_token']
-#     note_category = Faker().random_element(elements=('Home', 'Personal', 'Work'))
-#     note_description = Faker().sentence(3)
-#     note_title = Faker().sentence(2)
-#     body = {'category': 'a', 'description': note_description, 'title': note_title}
-#     print(body)
-#     headers = {'accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', 'x-auth-token': user_token}
-#     resp = requests.post("https://practice.expandtesting.com/notes/api/notes", headers=headers, data=body)
-#     respJS = resp.json()
-#     print(respJS)
-#     assert False == respJS['success']
-#     assert 400 == respJS['status']
-#     assert "Category must be one of the categories: Home, Work, Personal" == respJS['message']
-#     delete_user_api(randomData)
-#     delete_json_file(randomData)
-#     time.sleep(5)
+def test_create_note_api_bad_request(setup_database4Notes, create_table4Notes, insert_users4Notes):
+    randomData = Faker().hexify(text='^^^^^^^^^^^^')
+    create_user4Notes_api(randomData, setup_database4Notes)
+    login_user4Notes_api(randomData, setup_database4Notes)
+    # Abre o arquivo para obter o index do usuário escolhido aleatoriamente
+    with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
+        data = json.load(json_file)
+    user_index = data['user_index']
 
-# def test_create_note_api_unauthorized():
-#     randomData = Faker().hexify(text='^^^^^^^^^^^^')
-#     create_user_api(randomData)
-#     login_user_api(randomData)
-#     with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
-#         data = json.load(json_file)
-#     user_id = data['user_id']
-#     user_token = data['user_token']
-#     note_category = Faker().random_element(elements=('Home', 'Personal', 'Work'))
-#     note_description = Faker().sentence(3)
-#     note_title = Faker().sentence(2)
-#     body = {'category': note_category, 'description': note_description, 'title': note_title}
-#     print(body)
-#     headers = {'accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', 'x-auth-token': '@'+user_token}
-#     resp = requests.post("https://practice.expandtesting.com/notes/api/notes", headers=headers, data=body)
-#     respJS = resp.json()
-#     print(respJS)
-#     assert False == respJS['success']
-#     assert 401 == respJS['status']
-#     assert "Access token is not valid or has expired, you will need to login" == respJS['message']
-#     delete_user_api(randomData)
-#     delete_json_file(randomData)
-#     time.sleep(5)
+    # Conecta ao banco de dados para buscar os dados do usuário e da nota pelo index
+    cursor = setup_database4Notes.cursor(dictionary=True)
+    cursor.execute("SELECT id, token, noteTitle, noteDescription, noteCategory FROM notes WHERE `index` = %s", (user_index,))
+    user_note = cursor.fetchone()
 
-# def test_get_notes_api():
-#     randomData = Faker().hexify(text='^^^^^^^^^^^^')
-#     create_user_api(randomData)
-#     login_user_api(randomData)
-#     with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
-#         data = json.load(json_file)
-#     user_id = data['user_id']
-#     user_token = data['user_token']
-#     note_category_array = [Faker().random_element(elements=('Home', 'Personal', 'Work')), 'Home', 'Personal', 'Work']
-#     note_created_at_array = ["a", "b", "c", "d"]
-#     note_completed_array = [False, False, False, True]
-#     note_id_array = ["a", "b", "c", "d"]
-#     note_updated_at_array = ["a", "b", "c", "d"]
-#     note_description_array = [Faker().sentence(3), Faker().sentence(3), Faker().sentence(3), Faker().sentence(3)]
-#     note_title_array = [Faker().sentence(2), Faker().sentence(2), Faker().sentence(2), Faker().sentence(2)]
-#     # creates 4 notes, set the last as "complete" and asserts the 4 objects in the response.
-#     for x in range(4):
-#         body = {'category': note_category_array[x], 'description': note_description_array[x], 'title': note_title_array[x]}
-#         print(body)
-#         headers = {'accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', 'x-auth-token': user_token}
-#         resp = requests.post("https://practice.expandtesting.com/notes/api/notes", headers=headers, data=body)
-#         respJS = resp.json()
-#         print(respJS)
-#         assert True == respJS['success']
-#         assert 200 == respJS['status']
-#         assert "Note successfully created" == respJS['message']
-#         assert note_category_array[x] == respJS['data']['category']
-#         assert note_description_array[x] == respJS['data']['description']
-#         assert note_title_array[x] == respJS['data']['title']        
-#         note_id_array[x] = respJS['data']['id']
-#         note_created_at_array[x] = respJS['data']['created_at']
-#         note_updated_at_array[x] = respJS['data']['updated_at']
-#     headers = {'accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', 'x-auth-token': user_token}
-#     body = {'completed': "true"}
-#     print(body)
-#     resp = requests.patch(f"https://practice.expandtesting.com/notes/api/notes/{note_id_array[3]}", headers=headers, data=body)
-#     respJS = resp.json()
-#     note_updated_at_array[3] = respJS['data']['updated_at']    
-#     headers = {'accept': 'application/json', 'x-auth-token': user_token}
-#     resp = requests.get(f"https://practice.expandtesting.com/notes/api/notes", headers=headers)
-#     respJS = resp.json()
-#     print(respJS)
-#     assert True == respJS['success']
-#     assert 200 == respJS['status']
-#     assert "Notes successfully retrieved" == respJS['message']
-#     for x in range(4):
-#         assert note_category_array[x] == respJS['data'][3-x]['category']
-#         assert note_created_at_array[x] == respJS['data'][3-x]['created_at']
-#         assert note_completed_array[x] == respJS['data'][3-x]['completed']
-#         assert note_description_array[x] == respJS['data'][3-x]['description']
-#         assert note_id_array[x] == respJS['data'][3-x]['id']
-#         assert note_title_array[x] == respJS['data'][3-x]['title']
-#         assert note_updated_at_array[x] == respJS['data'][3-x]['updated_at']
-#         assert user_id == respJS['data'][3-x]['user_id']        
-#     delete_user_api(randomData)
-#     delete_json_file(randomData)
-#     time.sleep(5)
+    # Atribui os valores do banco de dados às variáveis
+    user_id = user_note["id"]
+    user_token = user_note["token"]
+    note_title = user_note["noteTitle"]
+    note_description = user_note["noteDescription"]
+    note_category = user_note["noteCategory"]
+    body = {'category': 'a', 'description': note_description, 'title': note_title}
+    print(body)
+    headers = {'accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', 'x-auth-token': user_token}
+    resp = requests.post("https://practice.expandtesting.com/notes/api/notes", headers=headers, data=body)
+    respJS = resp.json()
+    print(respJS)
+    assert False == respJS['success']
+    assert 400 == respJS['status']
+    assert "Category must be one of the categories: Home, Work, Personal" == respJS['message']
+    delete_user4Notes_api(randomData, setup_database4Notes)
+    delete_json_file(randomData)
+    time.sleep(5)
 
-# def test_get_notes_api_unauthorized():
-#     randomData = Faker().hexify(text='^^^^^^^^^^^^')
-#     create_user_api(randomData)
-#     login_user_api(randomData)
-#     with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
-#         data = json.load(json_file)
-#     user_id = data['user_id']
-#     user_token = data['user_token']
-#     note_category_array = [Faker().random_element(elements=('Home', 'Personal', 'Work')), 'Home', 'Personal', 'Work']
-#     note_created_at_array = ["a", "b", "c", "d"]
-#     note_completed_array = [False, False, False, True]
-#     note_id_array = ["a", "b", "c", "d"]
-#     note_updated_at_array = ["a", "b", "c", "d"]
-#     note_description_array = [Faker().sentence(3), Faker().sentence(3), Faker().sentence(3), Faker().sentence(3)]
-#     note_title_array = [Faker().sentence(2), Faker().sentence(2), Faker().sentence(2), Faker().sentence(2)]
-#     # creates 4 notes, set the last as "complete" and asserts the 4 objects in the response.
-#     for x in range(4):
-#         body = {'category': note_category_array[x], 'description': note_description_array[x], 'title': note_title_array[x]}
-#         print(body)
-#         headers = {'accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', 'x-auth-token': user_token}
-#         resp = requests.post("https://practice.expandtesting.com/notes/api/notes", headers=headers, data=body)
-#         respJS = resp.json()
-#         print(respJS)
-#         assert True == respJS['success']
-#         assert 200 == respJS['status']
-#         assert "Note successfully created" == respJS['message']
-#         assert note_category_array[x] == respJS['data']['category']
-#         assert note_description_array[x] == respJS['data']['description']
-#         assert note_title_array[x] == respJS['data']['title']        
-#         note_id_array[x] = respJS['data']['id']
-#         note_created_at_array[x] = respJS['data']['created_at']
-#         note_updated_at_array[x] = respJS['data']['updated_at']
-#     headers = {'accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', 'x-auth-token': user_token}
-#     body = {'completed': "true"}
-#     print(body)
-#     resp = requests.patch(f"https://practice.expandtesting.com/notes/api/notes/{note_id_array[3]}", headers=headers, data=body)
-#     respJS = resp.json()
-#     note_updated_at_array[3] = respJS['data']['updated_at']    
-#     headers = {'accept': 'application/json', 'x-auth-token': '@'+user_token}
-#     resp = requests.get(f"https://practice.expandtesting.com/notes/api/notes", headers=headers)
-#     respJS = resp.json()
-#     print(respJS)
-#     assert False == respJS['success']
-#     assert 401 == respJS['status']
-#     assert "Access token is not valid or has expired, you will need to login" == respJS['message']      
-#     delete_user_api(randomData)
-#     delete_json_file(randomData)
-#     time.sleep(5)
+def test_create_note_api_unauthorized(setup_database4Notes, create_table4Notes, insert_users4Notes):
+    randomData = Faker().hexify(text='^^^^^^^^^^^^')
+    create_user4Notes_api(randomData, setup_database4Notes)
+    login_user4Notes_api(randomData, setup_database4Notes)
+    # Abre o arquivo para obter o index do usuário escolhido aleatoriamente
+    with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
+        data = json.load(json_file)
+    user_index = data['user_index']
 
-# def test_get_note_api():
-#     randomData = Faker().hexify(text='^^^^^^^^^^^^')
-#     create_user_api(randomData)
-#     login_user_api(randomData)
-#     create_note_api(randomData)
-#     with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
-#         data = json.load(json_file)
-#     note_category = data['note_category']
-#     note_created_at = data['note_created_at']
-#     note_completed = data['note_completed']
-#     note_description = data['note_description']
-#     note_id = data['note_id']
-#     note_title = data['note_title']
-#     note_updated_at = data['note_updated_at']
-#     user_id = data['user_id']
-#     user_token = data['user_token']
-#     headers = {'accept': 'application/json', 'x-auth-token': user_token}
-#     resp = requests.get(f"https://practice.expandtesting.com/notes/api/notes/{note_id}", headers=headers)
-#     respJS = resp.json()
-#     print(respJS)
-#     assert True == respJS['success']
-#     assert 200 == respJS['status']
-#     assert "Note successfully retrieved" == respJS['message']
-#     assert note_category == respJS['data']['category']
-#     assert note_created_at == respJS['data']['created_at']
-#     assert note_completed == respJS['data']['completed']
-#     assert note_description == respJS['data']['description']
-#     assert note_id == respJS['data']['id']
-#     assert note_title == respJS['data']['title']
-#     assert note_updated_at == respJS['data']['updated_at']
-#     assert user_id == respJS['data']['user_id']
-#     delete_user_api(randomData)
-#     delete_json_file(randomData)
-#     time.sleep(5)
+    # Conecta ao banco de dados para buscar os dados do usuário e da nota pelo index
+    cursor = setup_database4Notes.cursor(dictionary=True)
+    cursor.execute("SELECT id, token, noteTitle, noteDescription, noteCategory FROM notes WHERE `index` = %s", (user_index,))
+    user_note = cursor.fetchone()
 
-# def test_get_note_api_unauthorized():
-#     randomData = Faker().hexify(text='^^^^^^^^^^^^')
-#     create_user_api(randomData)
-#     login_user_api(randomData)
-#     create_note_api(randomData)
-#     with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
-#         data = json.load(json_file)
-#     note_category = data['note_category']
-#     note_created_at = data['note_created_at']
-#     note_completed = data['note_completed']
-#     note_description = data['note_description']
-#     note_id = data['note_id']
-#     note_title = data['note_title']
-#     note_updated_at = data['note_updated_at']
-#     user_id = data['user_id']
-#     user_token = data['user_token']
-#     headers = {'accept': 'application/json', 'x-auth-token': '@'+user_token}
-#     resp = requests.get(f"https://practice.expandtesting.com/notes/api/notes/{note_id}", headers=headers)
-#     respJS = resp.json()
-#     print(respJS)
-#     assert False == respJS['success']
-#     assert 401 == respJS['status']
-#     assert "Access token is not valid or has expired, you will need to login" == respJS['message'] 
-#     delete_user_api(randomData)
-#     delete_json_file(randomData)
-#     time.sleep(5)
+    # Atribui os valores do banco de dados às variáveis
+    user_id = user_note["id"]
+    user_token = user_note["token"]
+    note_title = user_note["noteTitle"]
+    note_description = user_note["noteDescription"]
+    note_category = user_note["noteCategory"]
+    body = {'category': note_category, 'description': note_description, 'title': note_title}
+    print(body)
+    headers = {'accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', 'x-auth-token': '@'+user_token}
+    resp = requests.post("https://practice.expandtesting.com/notes/api/notes", headers=headers, data=body)
+    respJS = resp.json()
+    print(respJS)
+    assert False == respJS['success']
+    assert 401 == respJS['status']
+    assert "Access token is not valid or has expired, you will need to login" == respJS['message']
+    delete_user4Notes_api(randomData, setup_database4Notes)
+    delete_json_file(randomData)
+    time.sleep(5)
 
-# def test_update_note_api():
-#     randomData = Faker().hexify(text='^^^^^^^^^^^^')
-#     create_user_api(randomData)
-#     login_user_api(randomData)
-#     create_note_api(randomData)
-#     with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
-#         data = json.load(json_file)
-#     note_category = Faker().random_element(elements=('Home', 'Personal', 'Work'))
-#     note_created_at = data['note_created_at']
-#     note_completed = True
-#     note_description = Faker().sentence(3)
-#     note_id = data['note_id']
-#     note_title = Faker().sentence(2)
-#     user_id = data['user_id']
-#     user_token = data['user_token']    
-#     headers = {'accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', 'x-auth-token': user_token}
-#     body = {'category': note_category, 'completed': "true", 'description': note_description, 'title': note_title}
-#     print(body)
-#     resp = requests.put(f"https://practice.expandtesting.com/notes/api/notes/{note_id}", headers=headers, data=body)
-#     respJS = resp.json()
-#     print(respJS)
-#     assert True == respJS['success']
-#     assert 200 == respJS['status']
-#     assert "Note successfully Updated" == respJS['message']
-#     assert note_category == respJS['data']['category']
-#     assert note_created_at == respJS['data']['created_at']
-#     assert note_completed == respJS['data']['completed']
-#     assert note_description == respJS['data']['description']
-#     assert note_id == respJS['data']['id']
-#     assert note_title == respJS['data']['title']
-#     assert user_id == respJS['data']['user_id']
-#     delete_user_api(randomData)
-#     delete_json_file(randomData)
-#     time.sleep(5)
+def test_get_notes_api(setup_database4Notes, create_table4Notes, insert_users4Notes):
+    randomData = Faker().hexify(text='^^^^^^^^^^^^')
+    create_user4Notes_api(randomData, setup_database4Notes)
+    login_user4Notes_api(randomData, setup_database4Notes)
+    # Abre o arquivo para obter o index do usuário escolhido aleatoriamente
+    with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
+        data = json.load(json_file)
+    user_index = data['user_index']
 
-# def test_update_note_api_bad_request():
-#     randomData = Faker().hexify(text='^^^^^^^^^^^^')
-#     create_user_api(randomData)
-#     login_user_api(randomData)
-#     create_note_api(randomData)
-#     with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
-#         data = json.load(json_file)
-#     note_category = Faker().random_element(elements=('Home', 'Personal', 'Work'))
-#     note_created_at = data['note_created_at']
-#     note_completed = True
-#     note_description = Faker().sentence(3)
-#     note_id = data['note_id']
-#     note_title = Faker().sentence(2)
-#     user_id = data['user_id']
-#     user_token = data['user_token']    
-#     headers = {'accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', 'x-auth-token': user_token}
-#     body = {'category': 'a', 'completed': "true", 'description': note_description, 'title': note_title}
-#     print(body)
-#     resp = requests.put(f"https://practice.expandtesting.com/notes/api/notes/{note_id}", headers=headers, data=body)
-#     respJS = resp.json()
-#     print(respJS)
-#     assert False == respJS['success']
-#     assert 400 == respJS['status']
-#     assert "Category must be one of the categories: Home, Work, Personal" == respJS['message']
-#     delete_user_api(randomData)
-#     delete_json_file(randomData)
-#     time.sleep(5)
+    # Conecta ao banco de dados para buscar os dados do usuário pelo index
+    cursor = setup_database4Notes.cursor(dictionary=True)
+    cursor.execute("SELECT id, token FROM notes WHERE `index` = %s", (user_index,))
+    user = cursor.fetchone()
 
-# def test_update_note_api_unauthorized():
-#     randomData = Faker().hexify(text='^^^^^^^^^^^^')
-#     create_user_api(randomData)
-#     login_user_api(randomData)
-#     create_note_api(randomData)
-#     with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
-#         data = json.load(json_file)
-#     note_category = Faker().random_element(elements=('Home', 'Personal', 'Work'))
-#     note_created_at = data['note_created_at']
-#     note_completed = True
-#     note_description = Faker().sentence(3)
-#     note_id = data['note_id']
-#     note_title = Faker().sentence(2)
-#     user_id = data['user_id']
-#     user_token = data['user_token']    
-#     headers = {'accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', 'x-auth-token': "@"+user_token}
-#     body = {'category': note_category, 'completed': "true", 'description': note_description, 'title': note_title}
-#     print(body)
-#     resp = requests.put(f"https://practice.expandtesting.com/notes/api/notes/{note_id}", headers=headers, data=body)
-#     respJS = resp.json()
-#     print(respJS)
-#     assert False == respJS['success']
-#     assert 401 == respJS['status']
-#     assert "Access token is not valid or has expired, you will need to login" == respJS['message'] 
-#     delete_user_api(randomData)
-#     delete_json_file(randomData)
-#     time.sleep(5)
+    # Atribui os valores das colunas do banco às variáveis
+    user_id = user["id"]
+    user_token = user["token"]
+    note_category_array = [Faker().random_element(elements=('Home', 'Personal', 'Work')), 'Home', 'Personal', 'Work']
+    note_created_at_array = ["a", "b", "c", "d"]
+    note_completed_array = [False, False, False, True]
+    note_id_array = ["a", "b", "c", "d"]
+    note_updated_at_array = ["a", "b", "c", "d"]
+    note_description_array = [Faker().sentence(3), Faker().sentence(3), Faker().sentence(3), Faker().sentence(3)]
+    note_title_array = [Faker().sentence(2), Faker().sentence(2), Faker().sentence(2), Faker().sentence(2)]
+    # creates 4 notes, set the last as "complete" and asserts the 4 objects in the response.
+    for x in range(4):
+        body = {'category': note_category_array[x], 'description': note_description_array[x], 'title': note_title_array[x]}
+        print(body)
+        headers = {'accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', 'x-auth-token': user_token}
+        resp = requests.post("https://practice.expandtesting.com/notes/api/notes", headers=headers, data=body)
+        respJS = resp.json()
+        print(respJS)
+        assert True == respJS['success']
+        assert 200 == respJS['status']
+        assert "Note successfully created" == respJS['message']
+        assert note_category_array[x] == respJS['data']['category']
+        assert note_description_array[x] == respJS['data']['description']
+        assert note_title_array[x] == respJS['data']['title']        
+        note_id_array[x] = respJS['data']['id']
+        note_created_at_array[x] = respJS['data']['created_at']
+        note_updated_at_array[x] = respJS['data']['updated_at']
+    headers = {'accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', 'x-auth-token': user_token}
+    body = {'completed': "true"}
+    print(body)
+    resp = requests.patch(f"https://practice.expandtesting.com/notes/api/notes/{note_id_array[3]}", headers=headers, data=body)
+    respJS = resp.json()
+    note_updated_at_array[3] = respJS['data']['updated_at']  
 
-# def test_update_note_status_api():
-#     randomData = Faker().hexify(text='^^^^^^^^^^^^')
-#     create_user_api(randomData)
-#     login_user_api(randomData)
-#     create_note_api(randomData)
-#     with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
-#         data = json.load(json_file)
-#     note_category = data['note_category']
-#     note_created_at = data['note_created_at']
-#     note_description = data['note_description']
-#     note_completed = True
-#     note_id = data['note_id']
-#     note_title = data['note_title']
-#     user_id = data['user_id']
-#     user_token = data['user_token']    
-#     headers = {'accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', 'x-auth-token': user_token}
-#     body = {'completed': "true"}
-#     print(body)
-#     resp = requests.patch(f"https://practice.expandtesting.com/notes/api/notes/{note_id}", headers=headers, data=body)
-#     respJS = resp.json()
-#     print(respJS)
-#     assert True == respJS['success']
-#     assert 200 == respJS['status']
-#     assert "Note successfully Updated" == respJS['message']
-#     assert note_category == respJS['data']['category']
-#     assert note_created_at == respJS['data']['created_at']
-#     assert note_completed == respJS['data']['completed']
-#     assert note_description == respJS['data']['description']
-#     assert note_id == respJS['data']['id']
-#     assert note_title == respJS['data']['title']
-#     assert user_id == respJS['data']['user_id']
-#     delete_user_api(randomData)
-#     delete_json_file(randomData)
-#     time.sleep(5)
+    headers = {'accept': 'application/json', 'x-auth-token': user_token}
+    resp = requests.get(f"https://practice.expandtesting.com/notes/api/notes", headers=headers)
+    respJS = resp.json()
+    print(respJS)
+    assert True == respJS['success']
+    assert 200 == respJS['status']
+    assert "Notes successfully retrieved" == respJS['message']
+    for x in range(4):
+        assert note_category_array[x] == respJS['data'][3-x]['category']
+        assert note_created_at_array[x] == respJS['data'][3-x]['created_at']
+        assert note_completed_array[x] == respJS['data'][3-x]['completed']
+        assert note_description_array[x] == respJS['data'][3-x]['description']
+        assert note_id_array[x] == respJS['data'][3-x]['id']
+        assert note_title_array[x] == respJS['data'][3-x]['title']
+        assert note_updated_at_array[x] == respJS['data'][3-x]['updated_at']
+        assert user_id == respJS['data'][3-x]['user_id']
 
-# def test_update_note_status_api_bad_request():
-#     randomData = Faker().hexify(text='^^^^^^^^^^^^')
-#     create_user_api(randomData)
-#     login_user_api(randomData)
-#     create_note_api(randomData)
-#     with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
-#         data = json.load(json_file)
-#     note_id = data['note_id']
-#     user_token = data['user_token']    
-#     headers = {'accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', 'x-auth-token': user_token}
-#     body = {'completed': "a"}
-#     print(body)
-#     resp = requests.patch(f"https://practice.expandtesting.com/notes/api/notes/{note_id}", headers=headers, data=body)
-#     respJS = resp.json()
-#     print(respJS)
-#     assert False == respJS['success']
-#     assert 400 == respJS['status']
-#     assert "Note completed status must be boolean" == respJS['message']
-#     delete_user_api(randomData)
-#     delete_json_file(randomData)
-#     time.sleep(5)
+    # Insere as outras 3 notas no banco como novas linhas com os mesmos dados de usuário
+    cursor = setup_database4Notes.cursor(dictionary=True)
 
-# def test_update_note_status_api_unauthorized():
-#     randomData = Faker().hexify(text='^^^^^^^^^^^^')
-#     create_user_api(randomData)
-#     login_user_api(randomData)
-#     create_note_api(randomData)
-#     with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
-#         data = json.load(json_file)
-#     note_category = data['note_category']
-#     note_created_at = data['note_created_at']
-#     note_description = data['note_description']
-#     note_completed = True
-#     note_id = data['note_id']
-#     note_title = data['note_title']
-#     user_id = data['user_id']
-#     user_token = data['user_token']    
-#     headers = {'accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', 'x-auth-token': "@"+user_token}
-#     body = {'completed': note_completed}
-#     print(body)
-#     resp = requests.patch(f"https://practice.expandtesting.com/notes/api/notes/{note_id}", headers=headers, data=body)
-#     respJS = resp.json()
-#     print(respJS)
-#     assert False == respJS['success']
-#     assert 401 == respJS['status']
-#     assert "Access token is not valid or has expired, you will need to login" == respJS['message'] 
-#     delete_user_api(randomData)
-#     delete_json_file(randomData)
-#     time.sleep(5)
+    # Primeiro, pega todos os dados do usuário original (linha base)
+    cursor.execute("SELECT * FROM notes WHERE `index` = %s", (user_index,))
+    user_row = cursor.fetchone()
 
-# def test_delete_note_api():
-#     randomData = Faker().hexify(text='^^^^^^^^^^^^')
-#     create_user_api(randomData)
-#     login_user_api(randomData)
-#     create_note_api(randomData)
-#     with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
-#         data = json.load(json_file)
-#     note_id = data['note_id']
-#     user_token = data['user_token']
-#     headers = {'accept': 'application/json', 'x-auth-token': user_token}
-#     resp = requests.delete(f"https://practice.expandtesting.com/notes/api/notes/{note_id}", headers=headers)
-#     respJS = resp.json()
-#     print(respJS)
-#     assert True == respJS['success']
-#     assert 200 == respJS['status']
-#     assert "Note successfully deleted" == respJS['message']
-#     delete_user_api(randomData)
-#     delete_json_file(randomData)
-#     time.sleep(5)
+    # Atualiza a linha original com os dados da primeira nota
+    update_query = """
+        UPDATE notes SET
+            noteId = %s,
+            noteTitle = %s,
+            noteDescription = %s,
+            noteCompleted = %s,
+            noteCreatedAt = %s,
+            noteUpdatedAt = %s,
+            noteCategory = %s
+        WHERE `index` = %s
+    """
+    cursor.execute(update_query, (
+        note_id_array[0],
+        note_title_array[0],
+        note_description_array[0],
+        str(note_completed_array[0]),
+        note_created_at_array[0],
+        note_updated_at_array[0],
+        note_category_array[0],
+        user_index
+    ))
 
-# def test_delete_note_api_bad_request():
-#     randomData = Faker().hexify(text='^^^^^^^^^^^^')
-#     create_user_api(randomData)
-#     login_user_api(randomData)
-#     create_note_api(randomData)
-#     with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
-#         data = json.load(json_file)
-#     note_id = data['note_id']
-#     user_token = data['user_token']
-#     headers = {'accept': 'application/json', 'x-auth-token': user_token}
-#     resp = requests.delete(f"https://practice.expandtesting.com/notes/api/notes/'@'+{note_id}", headers=headers)
-#     respJS = resp.json()
-#     print(respJS)
-#     assert False == respJS['success']
-#     assert 400 == respJS['status']
-#     assert "Note ID must be a valid ID" == respJS['message']
-#     delete_user_api(randomData)
-#     delete_json_file(randomData)
-#     time.sleep(5)
+    # Move os usuários que vêm depois para frente (incrementa os índices)
+    cursor.execute("UPDATE notes SET `index` = `index` + 3 WHERE `index` > %s ORDER BY `index` DESC", (user_index,))
 
-# def test_delete_note_api_unauthorized():
-#     randomData = Faker().hexify(text='^^^^^^^^^^^^')
-#     create_user_api(randomData)
-#     login_user_api(randomData)
-#     create_note_api(randomData)
-#     with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
-#         data = json.load(json_file)
-#     note_id = data['note_id']
-#     user_token = data['user_token']
-#     headers = {'accept': 'application/json', 'x-auth-token': '@'+user_token}
-#     resp = requests.delete(f"https://practice.expandtesting.com/notes/api/notes/{note_id}", headers=headers)
-#     respJS = resp.json()
-#     print(respJS)
-#     assert False == respJS['success']
-#     assert 401 == respJS['status']
-#     assert "Access token is not valid or has expired, you will need to login" == respJS['message']
-#     delete_user_api(randomData)
-#     delete_json_file(randomData)
-#     time.sleep(5)
+    # Insere as outras 3 notas como novas linhas (copiando os dados de usuário)
+    insert_query = """
+        INSERT INTO notes (
+            `index`, id, name, email, password, company, phone, token,
+            noteId, noteTitle, noteDescription, noteCompleted,
+            noteCreatedAt, noteUpdatedAt, noteCategory
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    """
+
+    for i in range(1, 4):  # notas 1, 2 e 3 (as outras 3 além da original)
+        new_index = user_index + i        
+ 
+        new_email = "same as above in " + str(i) + " line"  # Para as outras linhas, o email fica vazio (NULL)
+
+        cursor.execute(insert_query, (
+            new_index,
+            user_row['id'],
+            user_row['name'],
+            new_email,  # email será preenchido apenas para a primeira linha
+            user_row['password'],
+            user_row['company'],
+            user_row['phone'],
+            user_row['token'],
+            note_id_array[i],
+            note_title_array[i],
+            note_description_array[i],
+            str(note_completed_array[i]),
+            note_created_at_array[i],
+            note_updated_at_array[i],
+            note_category_array[i]
+        ))
+
+    setup_database4Notes.commit()
+    cursor.close()
+
+    delete_user4Notes_api(randomData, setup_database4Notes)
+    delete_json_file(randomData)
+    time.sleep(5)
+
+def test_get_notes_api_unauthorized(setup_database4Notes, create_table4Notes, insert_users4Notes):
+    randomData = Faker().hexify(text='^^^^^^^^^^^^')
+    create_user4Notes_api(randomData, setup_database4Notes)
+    login_user4Notes_api(randomData, setup_database4Notes)
+    # Abre o arquivo para obter o index do usuário escolhido aleatoriamente
+    with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
+        data = json.load(json_file)
+    user_index = data['user_index']
+
+    # Conecta ao banco de dados para buscar os dados do usuário pelo index
+    cursor = setup_database4Notes.cursor(dictionary=True)
+    cursor.execute("SELECT id, token FROM notes WHERE `index` = %s", (user_index,))
+    user = cursor.fetchone()
+
+    # Atribui os valores das colunas do banco às variáveis
+    user_id = user["id"]
+    user_token = user["token"]
+    note_category_array = [Faker().random_element(elements=('Home', 'Personal', 'Work')), 'Home', 'Personal', 'Work']
+    note_created_at_array = ["a", "b", "c", "d"]
+    note_completed_array = [False, False, False, True]
+    note_id_array = ["a", "b", "c", "d"]
+    note_updated_at_array = ["a", "b", "c", "d"]
+    note_description_array = [Faker().sentence(3), Faker().sentence(3), Faker().sentence(3), Faker().sentence(3)]
+    note_title_array = [Faker().sentence(2), Faker().sentence(2), Faker().sentence(2), Faker().sentence(2)]
+    # creates 4 notes, set the last as "complete" and asserts the 4 objects in the response.
+    for x in range(4):
+        body = {'category': note_category_array[x], 'description': note_description_array[x], 'title': note_title_array[x]}
+        print(body)
+        headers = {'accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', 'x-auth-token': user_token}
+        resp = requests.post("https://practice.expandtesting.com/notes/api/notes", headers=headers, data=body)
+        respJS = resp.json()
+        print(respJS)
+        assert True == respJS['success']
+        assert 200 == respJS['status']
+        assert "Note successfully created" == respJS['message']
+        assert note_category_array[x] == respJS['data']['category']
+        assert note_description_array[x] == respJS['data']['description']
+        assert note_title_array[x] == respJS['data']['title']        
+        note_id_array[x] = respJS['data']['id']
+        note_created_at_array[x] = respJS['data']['created_at']
+        note_updated_at_array[x] = respJS['data']['updated_at']
+    headers = {'accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', 'x-auth-token': user_token}
+    body = {'completed': "true"}
+    print(body)
+
+    resp = requests.patch(f"https://practice.expandtesting.com/notes/api/notes/{note_id_array[3]}", headers=headers, data=body)
+    respJS = resp.json()
+    note_updated_at_array[3] = respJS['data']['updated_at']    
+    headers = {'accept': 'application/json', 'x-auth-token': '@'+user_token}
+    resp = requests.get(f"https://practice.expandtesting.com/notes/api/notes", headers=headers)
+    respJS = resp.json()
+    print(respJS)
+    assert False == respJS['success']
+    assert 401 == respJS['status']
+    assert "Access token is not valid or has expired, you will need to login" == respJS['message']      
+    delete_user4Notes_api(randomData, setup_database4Notes)
+    delete_json_file(randomData)
+    time.sleep(5)
+
+def test_get_note_api(setup_database4Notes, create_table4Notes, insert_users4Notes):
+    randomData = Faker().hexify(text='^^^^^^^^^^^^')
+    create_user4Notes_api(randomData, setup_database4Notes)
+    login_user4Notes_api(randomData, setup_database4Notes)
+    create_note_api(randomData, setup_database4Notes)
+    # Lê o arquivo JSON para obter o índice aleatório
+    with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
+        data = json.load(json_file)
+
+    # Pega o índice do arquivo JSON
+    user_index = data['user_index']
+
+    # Conecta ao banco de dados e pega os dados da linha correspondente ao índice
+    cursor = setup_database4Notes.cursor(dictionary=True)
+    cursor.execute("SELECT noteCategory, noteCreatedAt, noteCompleted, noteDescription, noteId, noteTitle, noteUpdatedAt, id, token FROM notes WHERE `index` = %s", (user_index,))
+    note_row = cursor.fetchone()
+
+    # Atribui os valores das colunas do banco às variáveis
+    note_category = note_row['noteCategory']
+    note_created_at = note_row['noteCreatedAt']
+    note_completed = bool(int(note_row['noteCompleted']))  # Converte '0' ou '1' para False ou True
+    note_description = note_row['noteDescription']
+    note_id = note_row['noteId']
+    note_title = note_row['noteTitle']
+    note_updated_at = note_row['noteUpdatedAt']
+    user_id = note_row['id']
+    user_token = note_row['token']
+
+    cursor.close()
+
+    headers = {'accept': 'application/json', 'x-auth-token': user_token}
+    resp = requests.get(f"https://practice.expandtesting.com/notes/api/notes/{note_id}", headers=headers)
+    respJS = resp.json()
+    print(respJS)
+    assert True == respJS['success']
+    assert 200 == respJS['status']
+    assert "Note successfully retrieved" == respJS['message']
+    assert note_category == respJS['data']['category']
+    assert note_created_at == respJS['data']['created_at']
+    assert note_completed == respJS['data']['completed']
+    assert note_description == respJS['data']['description']
+    assert note_id == respJS['data']['id']
+    assert note_title == respJS['data']['title']
+    assert note_updated_at == respJS['data']['updated_at']
+    assert user_id == respJS['data']['user_id']
+
+    delete_user4Notes_api(randomData, setup_database4Notes)
+    delete_json_file(randomData)
+    time.sleep(5)
+
+def test_get_note_api_unauthorized(setup_database4Notes, create_table4Notes, insert_users4Notes):
+    randomData = Faker().hexify(text='^^^^^^^^^^^^')
+    create_user4Notes_api(randomData, setup_database4Notes)
+    login_user4Notes_api(randomData, setup_database4Notes)
+    create_note_api(randomData, setup_database4Notes)
+    # Lê o arquivo JSON para obter o índice aleatório
+    with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
+        data = json.load(json_file)
+
+    # Pega o índice do arquivo JSON
+    user_index = data['user_index']
+
+    # Conecta ao banco de dados e pega os dados da linha correspondente ao índice
+    cursor = setup_database4Notes.cursor(dictionary=True)
+    cursor.execute("SELECT noteCategory, noteCreatedAt, noteCompleted, noteDescription, noteId, noteTitle, noteUpdatedAt, id, token FROM notes WHERE `index` = %s", (user_index,))
+    note_row = cursor.fetchone()
+
+    # Atribui os valores das colunas do banco às variáveis
+    note_category = note_row['noteCategory']
+    note_created_at = note_row['noteCreatedAt']
+    note_completed = note_row['noteCompleted']
+    note_description = note_row['noteDescription']
+    note_id = note_row['noteId']
+    note_title = note_row['noteTitle']
+    note_updated_at = note_row['noteUpdatedAt']
+    user_id = note_row['id']
+    user_token = note_row['token']
+
+    cursor.close()
+
+    headers = {'accept': 'application/json', 'x-auth-token': '@'+user_token}
+    resp = requests.get(f"https://practice.expandtesting.com/notes/api/notes/{note_id}", headers=headers)
+    respJS = resp.json()
+    print(respJS)
+    assert False == respJS['success']
+    assert 401 == respJS['status']
+    assert "Access token is not valid or has expired, you will need to login" == respJS['message'] 
+    delete_user4Notes_api(randomData, setup_database4Notes)
+    delete_json_file(randomData)
+    time.sleep(5)
+
+def test_update_note_api(setup_database4Notes, create_table4Notes, insert_users4Notes):
+    randomData = Faker().hexify(text='^^^^^^^^^^^^')
+    create_user4Notes_api(randomData, setup_database4Notes)
+    login_user4Notes_api(randomData, setup_database4Notes)
+    create_note_api(randomData, setup_database4Notes)
+    # Lê o arquivo JSON para obter o índice aleatório
+    with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
+        data = json.load(json_file)
+
+    # Pega o índice do arquivo JSON
+    user_index = data['user_index']
+
+    # Conecta ao banco de dados e pega os dados da linha correspondente ao índice
+    cursor = setup_database4Notes.cursor(dictionary=True)
+    cursor.execute("SELECT noteCategory, noteCreatedAt, noteCompleted, noteDescription, noteId, noteTitle, id, token FROM notes WHERE `index` = %s", (user_index,))
+    note_row = cursor.fetchone()
+
+    # Atribui os valores das colunas do banco às variáveis
+    note_created_at = note_row['noteCreatedAt']
+    note_completed = True  # Aqui, conforme a lógica do teste, sempre será True
+    note_id = note_row['noteId']
+    user_id = note_row['id']
+    user_token = note_row['token']
+    note_category = Faker().random_element(elements=('Home', 'Personal', 'Work'))
+    note_description = Faker().sentence(3) 
+    note_title = Faker().sentence(2) 
+
+    cursor.close()
+
+    headers = {'accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', 'x-auth-token': user_token}
+    body = {'category': note_category, 'completed': "true", 'description': note_description, 'title': note_title}
+    print(body)
+    resp = requests.put(f"https://practice.expandtesting.com/notes/api/notes/{note_id}", headers=headers, data=body)
+    respJS = resp.json()
+    print(respJS)
+    assert True == respJS['success']
+    assert 200 == respJS['status']
+    assert "Note successfully Updated" == respJS['message']
+    assert note_category == respJS['data']['category']
+    assert note_created_at == respJS['data']['created_at']
+    assert note_completed == respJS['data']['completed']
+    assert note_description == respJS['data']['description']
+    assert note_id == respJS['data']['id']
+    assert note_title == respJS['data']['title']
+    assert user_id == respJS['data']['user_id']
+
+    # Atualiza os dados da nota no banco de dados
+    cursor = setup_database4Notes.cursor()
+    update_query = """
+        UPDATE notes 
+        SET noteCategory = %s, noteDescription = %s, noteTitle = %s, noteCompleted = %s 
+        WHERE noteId = %s
+    """
+    cursor.execute(update_query, (note_category, note_description, note_title, note_completed, note_id))
+    setup_database4Notes.commit()  # Confirma a atualização no banco
+    cursor.close()
+
+    delete_user4Notes_api(randomData, setup_database4Notes)
+    delete_json_file(randomData)
+    time.sleep(5)
+
+def test_update_note_api_bad_request(setup_database4Notes, create_table4Notes, insert_users4Notes):
+    randomData = Faker().hexify(text='^^^^^^^^^^^^')
+    create_user4Notes_api(randomData, setup_database4Notes)
+    login_user4Notes_api(randomData, setup_database4Notes)
+    create_note_api(randomData, setup_database4Notes)
+    # Lê o arquivo JSON para obter o índice aleatório
+    with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
+        data = json.load(json_file)
+
+    # Pega o índice do arquivo JSON
+    user_index = data['user_index']
+
+    # Conecta ao banco de dados e pega os dados da linha correspondente ao índice
+    cursor = setup_database4Notes.cursor(dictionary=True)
+    cursor.execute("SELECT noteCategory, noteCreatedAt, noteCompleted, noteDescription, noteId, noteTitle, id, token FROM notes WHERE `index` = %s", (user_index,))
+    note_row = cursor.fetchone()
+
+    # Atribui os valores das colunas do banco às variáveis
+    note_created_at = note_row['noteCreatedAt']
+    note_completed = True  # Aqui, conforme a lógica do teste, sempre será True
+    note_id = note_row['noteId']
+    user_id = note_row['id']
+    user_token = note_row['token']
+    note_category = Faker().random_element(elements=('Home', 'Personal', 'Work'))
+    note_description = Faker().sentence(3) 
+    note_title = Faker().sentence(2) 
+
+    cursor.close()
+
+    headers = {'accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', 'x-auth-token': user_token}
+    body = {'category': 'a', 'completed': "true", 'description': note_description, 'title': note_title}
+    print(body)
+    resp = requests.put(f"https://practice.expandtesting.com/notes/api/notes/{note_id}", headers=headers, data=body)
+    respJS = resp.json()
+    print(respJS)
+    assert False == respJS['success']
+    assert 400 == respJS['status']
+    assert "Category must be one of the categories: Home, Work, Personal" == respJS['message']
+    delete_user4Notes_api(randomData, setup_database4Notes)
+    delete_json_file(randomData)
+    time.sleep(5)
+
+def test_update_note_api_unauthorized(setup_database4Notes, create_table4Notes, insert_users4Notes):
+    randomData = Faker().hexify(text='^^^^^^^^^^^^')
+    create_user4Notes_api(randomData, setup_database4Notes)
+    login_user4Notes_api(randomData, setup_database4Notes)
+    create_note_api(randomData, setup_database4Notes)
+    # Lê o arquivo JSON para obter o índice aleatório
+    with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
+        data = json.load(json_file)
+
+    # Pega o índice do arquivo JSON
+    user_index = data['user_index']
+
+    # Conecta ao banco de dados e pega os dados da linha correspondente ao índice
+    cursor = setup_database4Notes.cursor(dictionary=True)
+    cursor.execute("SELECT noteCategory, noteCreatedAt, noteCompleted, noteDescription, noteId, noteTitle, id, token FROM notes WHERE `index` = %s", (user_index,))
+    note_row = cursor.fetchone()
+
+    # Atribui os valores das colunas do banco às variáveis
+    note_created_at = note_row['noteCreatedAt']
+    note_completed = True  # Aqui, conforme a lógica do teste, sempre será True
+    note_id = note_row['noteId']
+    user_id = note_row['id']
+    user_token = note_row['token']
+    note_category = Faker().random_element(elements=('Home', 'Personal', 'Work'))
+    note_description = Faker().sentence(3) 
+    note_title = Faker().sentence(2) 
+
+    cursor.close()
+    headers = {'accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', 'x-auth-token': "@"+user_token}
+    body = {'category': note_category, 'completed': "true", 'description': note_description, 'title': note_title}
+    print(body)
+    resp = requests.put(f"https://practice.expandtesting.com/notes/api/notes/{note_id}", headers=headers, data=body)
+    respJS = resp.json()
+    print(respJS)
+    assert False == respJS['success']
+    assert 401 == respJS['status']
+    assert "Access token is not valid or has expired, you will need to login" == respJS['message'] 
+    delete_user4Notes_api(randomData, setup_database4Notes)
+    delete_json_file(randomData)
+    time.sleep(5)
+
+def test_update_note_status_api(setup_database4Notes, create_table4Notes, insert_users4Notes):
+    randomData = Faker().hexify(text='^^^^^^^^^^^^')
+    create_user4Notes_api(randomData, setup_database4Notes)
+    login_user4Notes_api(randomData, setup_database4Notes)
+    create_note_api(randomData, setup_database4Notes)
+    # Lê o arquivo JSON para obter o índice aleatório
+    with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
+        data = json.load(json_file)
+
+    # Pega o índice do arquivo JSON
+    user_index = data['user_index']
+
+    # Conecta ao banco de dados e pega os dados da linha correspondente ao índice
+    cursor = setup_database4Notes.cursor(dictionary=True)
+    cursor.execute("SELECT noteCategory, noteCreatedAt, noteCompleted, noteDescription, noteId, noteTitle, id, token FROM notes WHERE `index` = %s", (user_index,))
+    note_row = cursor.fetchone()
+
+    # Atribui os valores das colunas do banco às variáveis
+    note_created_at = note_row['noteCreatedAt']
+    note_completed = True  # Aqui, conforme a lógica do teste, sempre será True
+    note_id = note_row['noteId']
+    user_id = note_row['id']
+    user_token = note_row['token']
+    note_category = note_row['noteCategory'] 
+    note_description = note_row['noteDescription']
+    note_title = note_row['noteTitle']
+    cursor.close()
+
+    headers = {'accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', 'x-auth-token': user_token}
+    body = {'completed': "true"}
+    print(body)
+    resp = requests.patch(f"https://practice.expandtesting.com/notes/api/notes/{note_id}", headers=headers, data=body)
+    respJS = resp.json()
+    print(respJS)
+    assert True == respJS['success']
+    assert 200 == respJS['status']
+    assert "Note successfully Updated" == respJS['message']
+    assert note_category == respJS['data']['category']
+    assert note_created_at == respJS['data']['created_at']
+    assert note_completed == respJS['data']['completed']
+    assert note_description == respJS['data']['description']
+    assert note_id == respJS['data']['id']
+    assert note_title == respJS['data']['title']
+    assert user_id == respJS['data']['user_id']
+    delete_user4Notes_api(randomData, setup_database4Notes)
+    delete_json_file(randomData)
+    time.sleep(5)
+
+def test_update_note_status_api_bad_request(setup_database4Notes, create_table4Notes, insert_users4Notes):
+    randomData = Faker().hexify(text='^^^^^^^^^^^^')
+    create_user4Notes_api(randomData, setup_database4Notes)
+    login_user4Notes_api(randomData, setup_database4Notes)
+    create_note_api(randomData, setup_database4Notes)
+    # Lê o arquivo JSON para obter o índice aleatório
+    with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
+        data = json.load(json_file)
+
+    # Pega o índice do arquivo JSON
+    user_index = data['user_index']
+
+    # Conecta ao banco de dados e pega os dados da linha correspondente ao índice
+    cursor = setup_database4Notes.cursor(dictionary=True)
+    cursor.execute("SELECT noteCategory, noteCreatedAt, noteCompleted, noteDescription, noteId, noteTitle, id, token FROM notes WHERE `index` = %s", (user_index,))
+    note_row = cursor.fetchone()
+
+    # Atribui os valores das colunas do banco às variáveis
+    note_created_at = note_row['noteCreatedAt']
+    note_completed = True  # Aqui, conforme a lógica do teste, sempre será True
+    note_id = note_row['noteId']
+    user_id = note_row['id']
+    user_token = note_row['token']
+    note_category = note_row['noteCategory'] 
+    note_description = note_row['noteDescription']
+    note_title = note_row['noteTitle']
+
+    cursor.close()   
+    headers = {'accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', 'x-auth-token': user_token}
+    body = {'completed': "a"}
+    print(body)
+    resp = requests.patch(f"https://practice.expandtesting.com/notes/api/notes/{note_id}", headers=headers, data=body)
+    respJS = resp.json()
+    print(respJS)
+    assert False == respJS['success']
+    assert 400 == respJS['status']
+    assert "Note completed status must be boolean" == respJS['message']
+    delete_user4Notes_api(randomData, setup_database4Notes)
+    delete_json_file(randomData)
+    time.sleep(5)
+
+def test_update_note_status_api_unauthorized(setup_database4Notes, create_table4Notes, insert_users4Notes):
+    randomData = Faker().hexify(text='^^^^^^^^^^^^')
+    create_user4Notes_api(randomData, setup_database4Notes)
+    login_user4Notes_api(randomData, setup_database4Notes)
+    create_note_api(randomData, setup_database4Notes)
+    # Lê o arquivo JSON para obter o índice aleatório
+    with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
+        data = json.load(json_file)
+
+    # Pega o índice do arquivo JSON
+    user_index = data['user_index']
+
+    # Conecta ao banco de dados e pega os dados da linha correspondente ao índice
+    cursor = setup_database4Notes.cursor(dictionary=True)
+    cursor.execute("SELECT noteCategory, noteCreatedAt, noteCompleted, noteDescription, noteId, noteTitle, id, token FROM notes WHERE `index` = %s", (user_index,))
+    note_row = cursor.fetchone()
+
+    # Atribui os valores das colunas do banco às variáveis
+    note_created_at = note_row['noteCreatedAt']
+    note_completed = True  # Aqui, conforme a lógica do teste, sempre será True
+    note_id = note_row['noteId']
+    user_id = note_row['id']
+    user_token = note_row['token']
+    note_category = note_row['noteCategory'] 
+    note_description = note_row['noteDescription']
+    note_title = note_row['noteTitle']
+
+    cursor.close()     
+    headers = {'accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', 'x-auth-token': "@"+user_token}
+    body = {'completed': note_completed}
+    print(body)
+    resp = requests.patch(f"https://practice.expandtesting.com/notes/api/notes/{note_id}", headers=headers, data=body)
+    respJS = resp.json()
+    print(respJS)
+    assert False == respJS['success']
+    assert 401 == respJS['status']
+    assert "Access token is not valid or has expired, you will need to login" == respJS['message'] 
+    delete_user4Notes_api(randomData, setup_database4Notes)
+    delete_json_file(randomData)
+    time.sleep(5)
+
+def test_delete_note_api(setup_database4Notes, create_table4Notes, insert_users4Notes):
+    randomData = Faker().hexify(text='^^^^^^^^^^^^')
+    create_user4Notes_api(randomData, setup_database4Notes)
+    login_user4Notes_api(randomData, setup_database4Notes)
+    create_note_api(randomData, setup_database4Notes)
+    # Lê o arquivo JSON para obter o índice aleatório
+    with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
+        data = json.load(json_file)
+
+    # Pega o índice do arquivo JSON
+    user_index = data['user_index']
+
+    # Conecta ao banco de dados e pega os dados da linha correspondente ao índice
+    cursor = setup_database4Notes.cursor(dictionary=True)
+    cursor.execute("SELECT noteId, token FROM notes WHERE `index` = %s", (user_index,))
+    note_row = cursor.fetchone()
+
+    user_token = note_row['token']  
+    note_id = note_row['noteId']
+
+    headers = {'accept': 'application/json', 'x-auth-token': user_token}
+    resp = requests.delete(f"https://practice.expandtesting.com/notes/api/notes/{note_id}", headers=headers)
+    respJS = resp.json()
+    print(respJS)
+    assert True == respJS['success']
+    assert 200 == respJS['status']
+    assert "Note successfully deleted" == respJS['message']
+    delete_user4Notes_api(randomData, setup_database4Notes)
+    delete_json_file(randomData)
+    time.sleep(5)
+
+def test_delete_note_api_bad_request(setup_database4Notes, create_table4Notes, insert_users4Notes):
+    randomData = Faker().hexify(text='^^^^^^^^^^^^')
+    create_user4Notes_api(randomData, setup_database4Notes)
+    login_user4Notes_api(randomData, setup_database4Notes)
+    create_note_api(randomData, setup_database4Notes)
+    # Lê o arquivo JSON para obter o índice aleatório
+    with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
+        data = json.load(json_file)
+
+    # Pega o índice do arquivo JSON
+    user_index = data['user_index']
+
+    # Conecta ao banco de dados e pega os dados da linha correspondente ao índice
+    cursor = setup_database4Notes.cursor(dictionary=True)
+    cursor.execute("SELECT noteId, token FROM notes WHERE `index` = %s", (user_index,))
+    note_row = cursor.fetchone()
+
+    user_token = note_row['token']  
+    note_id = note_row['noteId']
+    headers = {'accept': 'application/json', 'x-auth-token': user_token}
+    resp = requests.delete(f"https://practice.expandtesting.com/notes/api/notes/'@'+{note_id}", headers=headers)
+    respJS = resp.json()
+    print(respJS)
+    assert False == respJS['success']
+    assert 400 == respJS['status']
+    assert "Note ID must be a valid ID" == respJS['message']
+    delete_user4Notes_api(randomData, setup_database4Notes)
+    delete_json_file(randomData)
+    time.sleep(5)
+
+def test_delete_note_api_unauthorized(setup_database4Notes, create_table4Notes, insert_users4Notes):
+    randomData = Faker().hexify(text='^^^^^^^^^^^^')
+    create_user4Notes_api(randomData, setup_database4Notes)
+    login_user4Notes_api(randomData, setup_database4Notes)
+    create_note_api(randomData, setup_database4Notes)
+    # Lê o arquivo JSON para obter o índice aleatório
+    with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
+        data = json.load(json_file)
+
+    # Pega o índice do arquivo JSON
+    user_index = data['user_index']
+
+    # Conecta ao banco de dados e pega os dados da linha correspondente ao índice
+    cursor = setup_database4Notes.cursor(dictionary=True)
+    cursor.execute("SELECT noteId, token FROM notes WHERE `index` = %s", (user_index,))
+    note_row = cursor.fetchone()
+
+    user_token = note_row['token']  
+    note_id = note_row['noteId']
+    headers = {'accept': 'application/json', 'x-auth-token': '@'+user_token}
+    resp = requests.delete(f"https://practice.expandtesting.com/notes/api/notes/{note_id}", headers=headers)
+    respJS = resp.json()
+    print(respJS)
+    assert False == respJS['success']
+    assert 401 == respJS['status']
+    assert "Access token is not valid or has expired, you will need to login" == respJS['message']
+    delete_user4Notes_api(randomData, setup_database4Notes)
+    delete_json_file(randomData)
+    time.sleep(5)

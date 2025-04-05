@@ -248,14 +248,24 @@ def delete_note_api(randomData, setup_database4Notes):
     assert 200 == respJS['status']
     assert "Note successfully deleted" == respJS['message']
 
-def create_note_api(randomData):
+def create_note_api(randomData, setup_database4Notes):
+    # Abre o arquivo para obter o index do usuário escolhido aleatoriamente
     with open(f"./tests/fixtures/file-{randomData}.json", 'r') as json_file:
         data = json.load(json_file)
-    user_id = data['user_id']
-    user_token = data['user_token']
-    note_category = Faker().random_element(elements=('Home', 'Personal', 'Work'))
-    note_description = Faker().sentence(3)
-    note_title = Faker().sentence(2)
+    user_index = data['user_index']
+
+    # Conecta ao banco de dados para buscar os dados do usuário e da nota pelo index
+    cursor = setup_database4Notes.cursor(dictionary=True)
+    cursor.execute("SELECT id, token, noteTitle, noteDescription, noteCategory FROM notes WHERE `index` = %s", (user_index,))
+    user_note = cursor.fetchone()
+
+    # Atribui os valores do banco de dados às variáveis
+    user_id = user_note["id"]
+    user_token = user_note["token"]
+    note_title = user_note["noteTitle"]
+    note_description = user_note["noteDescription"]
+    note_category = user_note["noteCategory"]
+
     body = {'category': note_category, 'description': note_description, 'title': note_title}
     print(body)
     headers = {'accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', 'x-auth-token': user_token}
@@ -273,27 +283,25 @@ def create_note_api(randomData):
     note_created_at = respJS['data']['created_at']
     note_completed = respJS['data']['completed']
     note_updated_at = respJS['data']['updated_at']
-    combined_responses = {
-        'note_category': note_category,
-        'note_created_at': note_created_at,
-        'note_completed': note_completed,
-        'note_description': note_description,
-        'note_id': note_id,
-        'note_title': note_title,        
-        'note_updated_at': note_updated_at,
-        'user_id': user_id,
-        'user_token': user_token
-    }
+
+    # Atualiza os dados da nota na linha do usuário correspondente ao user_index
+    cursor = setup_database4Notes.cursor()
+    cursor.execute("""
+        UPDATE notes 
+        SET noteId = %s, noteTitle = %s, noteDescription = %s, 
+            noteCategory = %s, noteCompleted = %s, 
+            noteCreatedAt = %s, noteUpdatedAt = %s
+        WHERE `index` = %s
+    """, (note_id, note_title, note_description, note_category, note_completed, note_created_at, note_updated_at, user_index))
+    
+    setup_database4Notes.commit()
+    cursor.close()
+
+    # Armazena apenas o índice do usuário escolhido no arquivo JSON
+    user_index_data = {"user_index": user_index}
+    
     with open(f"./tests/fixtures/file-{randomData}.json", 'w') as json_file:
-        json.dump(combined_responses, json_file, indent=4)
-
-
-
-
-
-
-
-
+        json.dump(user_index_data, json_file, indent=4)
 
 def delete_json_file(randomData):
     os.remove(f"./tests/fixtures/file-{randomData}.json")
