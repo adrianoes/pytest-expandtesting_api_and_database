@@ -88,13 +88,13 @@ def insert_users4Notes(setup_database4Notes, create_table4Notes):
     
     for _ in range(250):
         name = fake.name()
-        email = fake.company_email().replace("-", "")
+        email = fake.lexify(text='??').lower() + fake.company_email().replace("-", "")
         password = fake.password(length=12, special_chars=False, digits=True, upper_case=True, lower_case=True)
         company = fake.company()[:24]
         phone = fake.bothify(text='############')
         token = None  # Inicialmente vazio
-        noteTitle = fake.sentence(2)
-        noteDescription = fake.sentence(3)
+        noteTitle = fake.sentence(4)
+        noteDescription = fake.sentence(5)
         noteCategory = fake.random_element(elements=('Home', 'Personal', 'Work'))
 
         cursor.execute("""
@@ -144,6 +144,13 @@ def test_create_note_api(setup_database4Notes, create_table4Notes, insert_users4
     resp = requests.post("https://practice.expandtesting.com/notes/api/notes", headers=headers, data=body)
     respJS = resp.json()
     print(respJS)
+
+    note_id = respJS['data']['id']
+    note_created_at = respJS['data']['created_at']
+    note_completed = respJS['data']['completed']
+    note_updated_at = respJS['data']['updated_at']
+
+    # Assertions de validação no banco de dados e API
     assert True == respJS['success']
     assert 200 == respJS['status']
     assert "Note successfully created" == respJS['message']
@@ -151,23 +158,28 @@ def test_create_note_api(setup_database4Notes, create_table4Notes, insert_users4
     assert note_description == respJS['data']['description']
     assert note_title == respJS['data']['title']
     assert user_id == respJS['data']['user_id']
-    note_id = respJS['data']['id']
-    note_created_at = respJS['data']['created_at']
-    note_completed = respJS['data']['completed']
-    note_updated_at = respJS['data']['updated_at']
 
     # Atualiza os dados da nota na linha do usuário correspondente ao user_index
     cursor = setup_database4Notes.cursor()
     cursor.execute("""
         UPDATE notes 
-        SET noteId = %s, noteTitle = %s, noteDescription = %s, 
-            noteCategory = %s, noteCompleted = %s, 
+        SET noteId = %s, noteCompleted = %s, 
             noteCreatedAt = %s, noteUpdatedAt = %s
         WHERE `index` = %s
-    """, (note_id, note_title, note_description, note_category, note_completed, note_created_at, note_updated_at, user_index))
-    
+    """, (note_id, note_completed, note_created_at, note_updated_at, user_index))
     setup_database4Notes.commit()
+
+    # Consulta novamente para validar os dados salvos
+    cursor = setup_database4Notes.cursor(dictionary=True)
+    cursor.execute("SELECT noteId, noteCompleted, noteCreatedAt, noteUpdatedAt FROM notes WHERE `index` = %s", (user_index,))
+    db_note = cursor.fetchone()
     cursor.close()
+
+    # Assertions com os dados do banco de dados
+    assert db_note['noteId'] == note_id
+    assert bool(int(db_note['noteCompleted'])) == note_completed
+    assert db_note['noteCreatedAt'] == note_created_at
+    assert db_note['noteUpdatedAt'] == note_updated_at
 
     # Armazena apenas o índice do usuário escolhido no arquivo JSON
     user_index_data = {"user_index": user_index}
@@ -269,8 +281,8 @@ def test_get_notes_api(setup_database4Notes, create_table4Notes, insert_users4No
     note_completed_array = [False, False, False, True]
     note_id_array = ["a", "b", "c", "d"]
     note_updated_at_array = ["a", "b", "c", "d"]
-    note_description_array = [Faker().sentence(3), Faker().sentence(3), Faker().sentence(3), Faker().sentence(3)]
-    note_title_array = [Faker().sentence(2), Faker().sentence(2), Faker().sentence(2), Faker().sentence(2)]
+    note_description_array = [Faker().sentence(5), Faker().sentence(5), Faker().sentence(5), Faker().sentence(5)]
+    note_title_array = [Faker().sentence(4), Faker().sentence(4), Faker().sentence(4), Faker().sentence(4)]
     # creates 4 notes, set the last as "complete" and asserts the 4 objects in the response.
     for x in range(4):
         body = {'category': note_category_array[x], 'description': note_description_array[x], 'title': note_title_array[x]}
@@ -294,6 +306,7 @@ def test_get_notes_api(setup_database4Notes, create_table4Notes, insert_users4No
     resp = requests.patch(f"https://practice.expandtesting.com/notes/api/notes/{note_id_array[3]}", headers=headers, data=body)
     respJS = resp.json()
     note_updated_at_array[3] = respJS['data']['updated_at']  
+    
 
     headers = {'accept': 'application/json', 'x-auth-token': user_token}
     resp = requests.get(f"https://practice.expandtesting.com/notes/api/notes", headers=headers)
@@ -357,8 +370,8 @@ def test_get_notes_api(setup_database4Notes, create_table4Notes, insert_users4No
     for i in range(1, 4):  # notas 1, 2 e 3 (as outras 3 além da original)
         new_index = user_index + i        
  
-        new_email = "same as above in " + str(i) + " line"  # Para as outras linhas, o email fica vazio (NULL)
-
+        new_email = str(i) + "same@as.above.com"  # Para as outras linhas, o email fica vazio (NULL)
+        print(new_email)
         cursor.execute(insert_query, (
             new_index,
             user_row['id'],
@@ -378,7 +391,37 @@ def test_get_notes_api(setup_database4Notes, create_table4Notes, insert_users4No
         ))
 
     setup_database4Notes.commit()
-    cursor.close()
+    # cursor.close()
+
+        # Faz assert de cada uma das 4 notas: API vs banco de dados
+    for i in range(4):
+        note_id = note_id_array[i]
+
+        # Consulta no banco os dados da nota pelo noteId
+        cursor.execute("""
+            SELECT 
+                noteId, 
+                noteTitle, 
+                noteDescription, 
+                noteCompleted, 
+                noteCreatedAt, 
+                noteUpdatedAt, 
+                noteCategory 
+            FROM notes 
+            WHERE noteId = %s
+        """, (note_id,))
+        db_note = cursor.fetchone()
+
+        assert db_note is not None, f"Nota com ID {note_id} não encontrada no banco"
+
+        # Comparações (convertendo se necessário)
+        assert db_note['noteId'] == note_id
+        assert db_note['noteTitle'] == note_title_array[i]
+        assert db_note['noteDescription'] == note_description_array[i]
+        assert db_note['noteCompleted'] in [str(note_completed_array[i]), note_completed_array[i], "1" if note_completed_array[i] else "0", None]  # dependendo como armazena
+        assert db_note['noteCreatedAt'] == note_created_at_array[i]
+        assert db_note['noteUpdatedAt'] == note_updated_at_array[i]
+        assert db_note['noteCategory'] == note_category_array[i]
 
     delete_user4Notes_api(randomData, setup_database4Notes)
     delete_json_file(randomData)
@@ -406,8 +449,8 @@ def test_get_notes_api_unauthorized(setup_database4Notes, create_table4Notes, in
     note_completed_array = [False, False, False, True]
     note_id_array = ["a", "b", "c", "d"]
     note_updated_at_array = ["a", "b", "c", "d"]
-    note_description_array = [Faker().sentence(3), Faker().sentence(3), Faker().sentence(3), Faker().sentence(3)]
-    note_title_array = [Faker().sentence(2), Faker().sentence(2), Faker().sentence(2), Faker().sentence(2)]
+    note_description_array = [Faker().sentence(5), Faker().sentence(5), Faker().sentence(5), Faker().sentence(5)]
+    note_title_array = [Faker().sentence(4), Faker().sentence(4), Faker().sentence(4), Faker().sentence(4)]
     # creates 4 notes, set the last as "complete" and asserts the 4 objects in the response.
     for x in range(4):
         body = {'category': note_category_array[x], 'description': note_description_array[x], 'title': note_title_array[x]}
@@ -431,7 +474,8 @@ def test_get_notes_api_unauthorized(setup_database4Notes, create_table4Notes, in
 
     resp = requests.patch(f"https://practice.expandtesting.com/notes/api/notes/{note_id_array[3]}", headers=headers, data=body)
     respJS = resp.json()
-    note_updated_at_array[3] = respJS['data']['updated_at']    
+    note_updated_at_array[3] = respJS['data']['updated_at']  
+      
     headers = {'accept': 'application/json', 'x-auth-token': '@'+user_token}
     resp = requests.get(f"https://practice.expandtesting.com/notes/api/notes", headers=headers)
     respJS = resp.json()
@@ -558,8 +602,8 @@ def test_update_note_api(setup_database4Notes, create_table4Notes, insert_users4
     user_id = note_row['id']
     user_token = note_row['token']
     note_category = Faker().random_element(elements=('Home', 'Personal', 'Work'))
-    note_description = Faker().sentence(3) 
-    note_title = Faker().sentence(2) 
+    note_description = Faker().sentence(5) 
+    note_title = Faker().sentence(4) 
 
     cursor.close()
 
@@ -580,16 +624,35 @@ def test_update_note_api(setup_database4Notes, create_table4Notes, insert_users4
     assert note_title == respJS['data']['title']
     assert user_id == respJS['data']['user_id']
 
-    # Atualiza os dados da nota no banco de dados
+    note_updated_at = respJS['data']['updated_at']
+
+    # Atualiza os dados da nota na linha do usuário correspondente ao user_index no banco
     cursor = setup_database4Notes.cursor()
-    update_query = """
+    cursor.execute("""
         UPDATE notes 
-        SET noteCategory = %s, noteDescription = %s, noteTitle = %s, noteCompleted = %s 
-        WHERE noteId = %s
-    """
-    cursor.execute(update_query, (note_category, note_description, note_title, note_completed, note_id))
-    setup_database4Notes.commit()  # Confirma a atualização no banco
+        SET noteCategory = %s, noteDescription = %s, noteTitle = %s, 
+            noteCompleted = %s, noteUpdatedAt = %s
+        WHERE `index` = %s
+    """, (note_category, note_description, note_title, note_completed, note_updated_at, user_index))
+    setup_database4Notes.commit()
     cursor.close()
+
+    # Consulta os dados atualizados do banco para validação (somente os campos desejados)
+    cursor = setup_database4Notes.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT noteCategory, noteDescription, noteTitle, noteCompleted, noteUpdatedAt
+        FROM notes 
+        WHERE noteId = %s
+    """, (note_id,))
+    db_note = cursor.fetchone()
+    cursor.close()
+
+    # Assertions comparando os valores da resposta da API com os valores persistidos no banco
+    assert db_note['noteCategory'] == respJS['data']['category']
+    assert db_note['noteDescription'] == respJS['data']['description']
+    assert db_note['noteTitle'] == respJS['data']['title']
+    assert bool(int(db_note['noteCompleted'])) == respJS['data']['completed']
+    assert db_note['noteUpdatedAt'] == respJS['data']['updated_at']
 
     delete_user4Notes_api(randomData, setup_database4Notes)
     delete_json_file(randomData)
@@ -619,8 +682,8 @@ def test_update_note_api_bad_request(setup_database4Notes, create_table4Notes, i
     user_id = note_row['id']
     user_token = note_row['token']
     note_category = Faker().random_element(elements=('Home', 'Personal', 'Work'))
-    note_description = Faker().sentence(3) 
-    note_title = Faker().sentence(2) 
+    note_description = Faker().sentence(5) 
+    note_title = Faker().sentence(4) 
 
     cursor.close()
 
@@ -661,8 +724,8 @@ def test_update_note_api_unauthorized(setup_database4Notes, create_table4Notes, 
     user_id = note_row['id']
     user_token = note_row['token']
     note_category = Faker().random_element(elements=('Home', 'Personal', 'Work'))
-    note_description = Faker().sentence(3) 
-    note_title = Faker().sentence(2) 
+    note_description = Faker().sentence(5) 
+    note_title = Faker().sentence(4) 
 
     cursor.close()
     headers = {'accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', 'x-auth-token': "@"+user_token}
@@ -722,6 +785,20 @@ def test_update_note_status_api(setup_database4Notes, create_table4Notes, insert
     assert note_id == respJS['data']['id']
     assert note_title == respJS['data']['title']
     assert user_id == respJS['data']['user_id']
+
+    # Atualiza o status "completed" da nota no banco de dados (caso não seja automaticamente persistido)
+    cursor = setup_database4Notes.cursor(dictionary=True)
+    cursor.execute("UPDATE notes SET noteCompleted = %s WHERE noteId = %s", (respJS['data']['completed'], note_id))
+    setup_database4Notes.commit()
+    
+    # Consulta o banco para validar o status atualizado
+    cursor.execute("SELECT noteCompleted FROM notes WHERE noteId = %s", (note_id,))
+    db_note = cursor.fetchone()
+    cursor.close()
+
+    # Assertion para validar que o campo 'noteCompleted' no banco corresponde ao valor retornado pela API
+    assert bool(int(db_note['noteCompleted'])) == respJS['data']['completed']
+
     delete_user4Notes_api(randomData, setup_database4Notes)
     delete_json_file(randomData)
     time.sleep(5)

@@ -81,7 +81,7 @@ def insert_users(setup_database, create_table):
     
     for _ in range(250):
         name = fake.name()
-        email = fake.company_email().replace("-", "")
+        email = fake.lexify(text='??').lower() + fake.company_email().replace("-", "")
         password = fake.password(length=12, special_chars=False, digits=True, upper_case=True, lower_case=True)
         company = fake.company()[:24]
         phone = fake.bothify(text='############')

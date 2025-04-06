@@ -140,18 +140,28 @@ def create_user4Notes_api(randomData, setup_database4Notes):
     respJS = resp.json()
     print(respJS)
 
+    user_email = respJS['data']['email']
+    user_name = respJS['data']['name']
+    user_id = respJS['data']['id']
+
+    # Atualiza o ID do usuário na mesma linha no banco de dados
+    cursor.execute("UPDATE notes SET id = %s WHERE `index` = %s", (user_id, user_index))
+    setup_database4Notes.commit()
+
+    # Consulta novamente o banco para verificar se o ID foi atualizado
+    cursor.execute("SELECT id FROM notes WHERE `index` = %s", (user_index,))
+    db_user = cursor.fetchone()
+    cursor.close()
+
+    # Assertions de validação da resposta da API
     assert True == respJS['success']
     assert 201 == respJS['status']
     assert "User account created successfully" == respJS['message']
     assert user_email == respJS['data']['email']
     assert user_name == respJS['data']['name']
 
-    user_id = respJS['data']['id']
-
-    # Atualiza o ID do usuário na mesma linha no banco de dados
-    cursor.execute("UPDATE notes SET id = %s WHERE `index` = %s", (user_id, user_index))
-    setup_database4Notes.commit()
-    cursor.close()
+    # Assertions com os dados do banco de dados (apenas para o 'id')
+    assert db_user['id'] == user_id
 
     # Armazena apenas o índice do usuário escolhido
     user_index_data = {"user_index": user_index}
@@ -183,20 +193,28 @@ def login_user4Notes_api(randomData, setup_database4Notes):
     respJS = resp.json()
     print(respJS)
 
-    assert True == respJS['success']
-    assert 200 == respJS['status']
-    assert "Login successful" == respJS['message']
-    assert user_email == respJS['data']['email']
-    assert user_id == respJS['data']['id']
-    assert user_name == respJS['data']['name']
-    
     # Obtém o token de usuário
     user_token = respJS['data']['token']
 
     # Atualiza o banco de dados com o token obtido
     cursor.execute("UPDATE notes SET token = %s WHERE `index` = %s", (user_token, user_index))
     setup_database4Notes.commit()
+
+    # Consulta o banco para verificar se o token foi atualizado
+    cursor.execute("SELECT token FROM notes WHERE `index` = %s", (user_index,))
+    db_user = cursor.fetchone()
     cursor.close()
+
+    # Assertions da resposta da API
+    assert True == respJS['success']
+    assert 200 == respJS['status']
+    assert "Login successful" == respJS['message']
+    assert user_email == respJS['data']['email']
+    assert user_id == respJS['data']['id']
+    assert user_name == respJS['data']['name']
+
+    # Assertion para validar o token no banco de dados
+    assert db_user['token'] == user_token
 
     # Atualiza o objeto com o índice do usuário escolhido
     user_index_data = {"user_index": user_index}
@@ -281,6 +299,13 @@ def create_note_api(randomData, setup_database4Notes):
     resp = requests.post("https://practice.expandtesting.com/notes/api/notes", headers=headers, data=body)
     respJS = resp.json()
     print(respJS)
+
+    note_id = respJS['data']['id']
+    note_created_at = respJS['data']['created_at']
+    note_completed = respJS['data']['completed']
+    note_updated_at = respJS['data']['updated_at']
+
+    # Assertions de validação no banco de dados e API
     assert True == respJS['success']
     assert 200 == respJS['status']
     assert "Note successfully created" == respJS['message']
@@ -288,23 +313,28 @@ def create_note_api(randomData, setup_database4Notes):
     assert note_description == respJS['data']['description']
     assert note_title == respJS['data']['title']
     assert user_id == respJS['data']['user_id']
-    note_id = respJS['data']['id']
-    note_created_at = respJS['data']['created_at']
-    note_completed = respJS['data']['completed']
-    note_updated_at = respJS['data']['updated_at']
 
     # Atualiza os dados da nota na linha do usuário correspondente ao user_index
     cursor = setup_database4Notes.cursor()
     cursor.execute("""
         UPDATE notes 
-        SET noteId = %s, noteTitle = %s, noteDescription = %s, 
-            noteCategory = %s, noteCompleted = %s, 
+        SET noteId = %s, noteCompleted = %s, 
             noteCreatedAt = %s, noteUpdatedAt = %s
         WHERE `index` = %s
-    """, (note_id, note_title, note_description, note_category, note_completed, note_created_at, note_updated_at, user_index))
-    
+    """, (note_id, note_completed, note_created_at, note_updated_at, user_index))
     setup_database4Notes.commit()
+
+    # Consulta novamente para validar os dados salvos
+    cursor = setup_database4Notes.cursor(dictionary=True)
+    cursor.execute("SELECT noteId, noteCompleted, noteCreatedAt, noteUpdatedAt FROM notes WHERE `index` = %s", (user_index,))
+    db_note = cursor.fetchone()
     cursor.close()
+
+    # Assertions com os dados do banco de dados
+    assert db_note['noteId'] == note_id
+    assert bool(int(db_note['noteCompleted'])) == note_completed
+    assert db_note['noteCreatedAt'] == note_created_at
+    assert db_note['noteUpdatedAt'] == note_updated_at
 
     # Armazena apenas o índice do usuário escolhido no arquivo JSON
     user_index_data = {"user_index": user_index}
