@@ -109,14 +109,14 @@ def teardown_database(setup_database):
     setup_database.close()
     print("\n🔥 Banco de dados excluído após os testes!")
 
-def test_user_table_has_250_rows(setup_database):
+def test_user_table_has_250_rows(setup_database, create_table, insert_users):
     cursor = setup_database.cursor()
     cursor.execute("SELECT COUNT(*) FROM users")
     count = cursor.fetchone()[0]
     cursor.close()
-    assert count == 250, f"Esperado 250 usuários, mas encontrado {count}"
+    assert count == 250, f"Expected 250 users, but found {count}"
 
-def test_user_table_structure(setup_database):
+def test_user_table_structure(setup_database, create_table, insert_users):
     expected_columns = {
         'index', 'id', 'name', 'email', 'password', 'company', 'phone', 'token'
     }
@@ -124,51 +124,51 @@ def test_user_table_structure(setup_database):
     cursor.execute("DESCRIBE users")
     columns = {row[0] for row in cursor.fetchall()}
     cursor.close()
-    assert expected_columns == columns, f"Colunas esperadas: {expected_columns}, mas encontrado: {columns}"
+    assert expected_columns == columns, f"Expected columns: {expected_columns}, but found: {columns}"
 
-def test_user_name_length(setup_database):
+def test_user_name_length(setup_database, create_table, insert_users):
     cursor = setup_database.cursor()
     cursor.execute("SELECT name FROM users")
     names = cursor.fetchall()
     cursor.close()
     for (name,) in names:
-        assert 4 <= len(name) <= 30, f"Nome inválido: '{name}' com {len(name)} caracteres"
+        assert 4 <= len(name) <= 30, f"Invalid name: '{name}' with {len(name)} characters"
 
-def test_company_name_length(setup_database):
+def test_company_name_length(setup_database, create_table, insert_users):
     cursor = setup_database.cursor()
     cursor.execute("SELECT company FROM users")
     companies = cursor.fetchall()
     cursor.close()
     for (company,) in companies:
-        assert 4 <= len(company) <= 30, f"Empresa inválida: '{company}' com {len(company)} caracteres"
+        assert 4 <= len(company) <= 30, f"Invalid company: '{company}' with {len(company)} characters"
 
-def test_phone_number_length(setup_database):
+def test_phone_number_length(setup_database, create_table, insert_users):
     cursor = setup_database.cursor()
     cursor.execute("SELECT phone FROM users")
     phones = cursor.fetchall()
     cursor.close()
     for (phone,) in phones:
         digits = ''.join(filter(str.isdigit, phone))
-        assert 8 <= len(digits) <= 20, f"Telefone inválido: '{phone}' com {len(digits)} dígitos"
+        assert 8 <= len(digits) <= 20, f"Invalid phone: '{phone}' with {len(digits)} digits"
 
-def test_password_length(setup_database):
+def test_password_length(setup_database, create_table, insert_users):
     cursor = setup_database.cursor()
     cursor.execute("SELECT password FROM users")
     passwords = cursor.fetchall()
     cursor.close()
     for (pwd,) in passwords:
-        assert 6 <= len(pwd) <= 30, f"Senha inválida com {len(pwd)} caracteres: {pwd}"
+        assert 6 <= len(pwd) <= 30, f"Invalid password with {len(pwd)} characters: {pwd}"
 
-def test_token_length_if_exists(setup_database):
+def test_token_length_if_exists(setup_database, create_table, insert_users):
     cursor = setup_database.cursor()
     cursor.execute("SELECT token FROM users")
     tokens = cursor.fetchall()
     cursor.close()
     for (token,) in tokens:
         if token is not None:
-            assert len(token) == 64, f"Token inválido: '{token}' com {len(token)} caracteres"
+            assert len(token) == 64, f"Invalid token: '{token}' with {len(token)} characters"
 
-def test_email_format(setup_database):
+def test_email_format(setup_database, create_table, insert_users):
     cursor = setup_database.cursor()
     cursor.execute("SELECT email FROM users")
     emails = cursor.fetchall()
@@ -177,10 +177,10 @@ def test_email_format(setup_database):
     email_regex = re.compile(r'^[a-z0-9][a-z0-9._%+-]*@[a-z0-9.-]+\.[a-z]{2,}$')
 
     for (email,) in emails:
-        assert email == email.lower(), f"E-mail não está em minúsculo: {email}"
-        assert email_regex.match(email), f"E-mail inválido: {email}"
+        assert email == email.lower(), f"Email is not in lowercase: {email}"
+        assert email_regex.match(email), f"Invalid email: {email}"
 
-def test_user_id_format_if_exists_in_users_table(setup_database):
+def test_user_id_format_if_exists_in_users_table(setup_database, create_table, insert_users):
     cursor = setup_database.cursor()
     cursor.execute("SELECT id FROM users")
     user_ids = cursor.fetchall()
@@ -190,7 +190,7 @@ def test_user_id_format_if_exists_in_users_table(setup_database):
             assert user_id.isalnum(), f"id contains invalid characters: {user_id}"
             assert len(user_id) == 24, f"id must be 24 characters long: {user_id}"
 
-def test_token_format_if_exists_in_users_table(setup_database):
+def test_token_format_if_exists_in_users_table(setup_database, create_table, insert_users):
     cursor = setup_database.cursor()
     cursor.execute("SELECT token FROM users")
     tokens = cursor.fetchall()
