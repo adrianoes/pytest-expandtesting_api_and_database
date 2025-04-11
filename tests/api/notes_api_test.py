@@ -117,6 +117,89 @@ def teardown_database4Notes(setup_database4Notes):
     setup_database4Notes.close()
     print("\n🔥 Banco de dados excluído após os testes!")
 
+def test_notes_table_has_250_rows(setup_database4Notes):
+    cursor = setup_database4Notes.cursor()
+    cursor.execute("SELECT COUNT(*) FROM notes")
+    count = cursor.fetchone()[0]
+    cursor.close()
+    assert count == 250, f"Expected 250 records, but found {count}"
+
+def test_notes_table_structure(setup_database4Notes):
+    expected_columns = {
+        'index', 'id', 'name', 'email', 'password', 'company', 'phone', 'token',
+        'noteId', 'noteTitle', 'noteDescription', 'noteCompleted',
+        'noteCreatedAt', 'noteUpdatedAt', 'noteCategory'
+    }
+    cursor = setup_database4Notes.cursor()
+    cursor.execute("DESCRIBE notes")
+    columns = {row[0] for row in cursor.fetchall()}
+    cursor.close()
+    assert expected_columns == columns, f"Expected columns: {expected_columns}, but found: {columns}"
+
+def test_note_title_length(setup_database4Notes):
+    cursor = setup_database4Notes.cursor()
+    cursor.execute("SELECT noteTitle FROM notes")
+    titles = cursor.fetchall()
+    cursor.close()
+    for (title,) in titles:
+        assert 4 <= len(title) <= 100, f"Invalid title: '{title}' with {len(title)} characters"
+
+def test_note_description_length(setup_database4Notes):
+    cursor = setup_database4Notes.cursor()
+    cursor.execute("SELECT noteDescription FROM notes")
+    descriptions = cursor.fetchall()
+    cursor.close()
+    for (desc,) in descriptions:
+        assert 4 <= len(desc) <= 1000, f"Invalid description with {len(desc)} characters: {desc}"
+
+def test_note_completed_is_boolean_or_null(setup_database4Notes):
+    cursor = setup_database4Notes.cursor()
+    cursor.execute("SELECT noteCompleted FROM notes")
+    completed_values = cursor.fetchall()
+    cursor.close()
+    for (completed,) in completed_values:
+        if completed is not None:
+            assert completed.lower() in ['true', 'false'], f"Invalid status: {completed}"
+
+def test_note_category_validity(setup_database4Notes):
+    valid_categories = {'Home', 'Work', 'Personal'}
+    cursor = setup_database4Notes.cursor()
+    cursor.execute("SELECT noteCategory FROM notes")
+    categories = cursor.fetchall()
+    cursor.close()
+    for (category,) in categories:
+        assert category in valid_categories, f"Invalid category: {category}"
+
+def test_note_id_format_if_exists(setup_database4Notes):
+    cursor = setup_database4Notes.cursor()
+    cursor.execute("SELECT noteId FROM notes")
+    note_ids = cursor.fetchall()
+    cursor.close()
+    for (note_id,) in note_ids:
+        if note_id:
+            assert note_id.isalnum(), f"noteId contains invalid characters: {note_id}"
+            assert len(note_id) == 24, f"noteId must be 24 characters long: {note_id}"
+
+def test_user_id_format_if_exists(setup_database4Notes):
+    cursor = setup_database4Notes.cursor()
+    cursor.execute("SELECT id FROM notes")
+    user_ids = cursor.fetchall()
+    cursor.close()
+    for (user_id,) in user_ids:
+        if user_id:
+            assert user_id.isalnum(), f"id contains invalid characters: {user_id}"
+            assert len(user_id) == 24, f"id must be 24 characters long: {user_id}"
+
+def test_token_format_if_exists(setup_database4Notes):
+    cursor = setup_database4Notes.cursor()
+    cursor.execute("SELECT token FROM notes")
+    tokens = cursor.fetchall()
+    cursor.close()
+    for (token,) in tokens:
+        if token:
+            assert token.isalnum(), f"Token contains non-alphanumeric characters: {token}"
+            assert len(token) == 64, f"Token must be 64 characters long: {token}"
+
 def test_create_note_api(setup_database4Notes, create_table4Notes, insert_users4Notes):
     randomData = Faker().hexify(text='^^^^^^^^^^^^')
     create_user4Notes_api(randomData, setup_database4Notes)
@@ -975,3 +1058,8 @@ def test_delete_note_api_unauthorized(setup_database4Notes, create_table4Notes, 
     delete_user4Notes_api(randomData, setup_database4Notes)
     delete_json_file(randomData)
     time.sleep(5)
+
+
+
+
+
